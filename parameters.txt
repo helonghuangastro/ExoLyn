@@ -1,0 +1,38 @@
+opa_IR = 0.3    # opacity in IR, cm^2 g^-1
+g = 2192    # gravitational acceleration, cm s^-1
+firr = 1 / 4    # radiation distribution
+opa_vis_IR = 0.158    # opacity ratio between visual and IR
+T_int = 500    # interior temperature, K
+mgas = 2.34 * cnt.mu    # gas molecular weight, g
+Kzz = 1e8    # diffusion, cm^2s^-1
+Kp = 1e8    # particle diffusivity, cm^2s^-1
+cs_mol = 2e-15    # molecular cross section, cm^2
+
+f_stick = 1.
+cs_com = 8e-15    # common cross section, cm^2
+rho_int = 2.8    # particle internal density, g cm^-3
+an = 1e-7    # nucleation radius, cm
+mn0 = 4 / 3 * np.pi * rho_int * an ** 3    # nucleation mass, g
+nuc_pro = 1e-15    # nuclei productio rate, g cm^-2 s^-1
+sigma_nuc = 0.2    # width of nucleation profile
+P_star = 60    # nucleation height, in cgs
+
+solid = ['MgSiO3', 'Mg2SiO4', 'SiO2', 'MgO', 'FeO', 'Fe2O3', 'FeS', 'Fe', 'TiO2', 'Al2O3']
+gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
+xvb = [7.56e-4, 1.32e-3, 1e-3, 1e-3, 8e-4, 1e-5, 7e-5]
+reactionfile = 'reactions.txt'
+gibbsfile = 'gibbs.txt'
+
+T_star = 5778    # stellar temperature, K
+R_star = cnt.R_sun    # stellar radius, cm
+
+Rp = 1.087 * cnt.Rj    # planet radius, cm
+rp = 0.05 * cnt.au    # planet orbital radius, cm
+
+N = 700
+Pa = 1.    # pressure at the upper limit of atmosphere, in cgs units
+Pb = 1e7    # pressure at the lower limit of atmosphere, in cgs units
+Pref = 1e6    # reference pressure at which the gibbs energy is measured
+
+autoboundary = True
+
