@@ -223,6 +223,7 @@ def dEdysrc(atmosphere, y1, pref_src, econ0, exnsrc0, **kwargs):
     Sc = np.zeros((len(reactions), atmosphere.N))
     mugas = np.atleast_2d(atmosphere.chem.mugas).T
     mucond = atmosphere.chem.musolid
+    # TBD: A pythonic way to get rid of the for loops
     for i, reaction in enumerate(reactions):
         solidindex = reaction.solidindex
         gasst = reaction.gasst
