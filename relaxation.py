@@ -187,7 +187,7 @@ def newy(matsol, y0, bcb, atmosphere, **kwargs):
     Emat = funs.E(atmosphere, **kwargs)
     Eold = np.mean(np.abs(Emat))
 
-    dy = matsol*0.75
+    dy = matsol
     dy = np.minimum(dy, y0[:nvar, :-1])
     dy = np.maximum(dy, -y0[:nvar, :-1]*0.5)
 

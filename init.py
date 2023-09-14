@@ -502,7 +502,7 @@ def findbound(Pa, Pb, N, chem):
     cache = funs.init_cache(Parr, chem)
     SR = getS(cache)
     if pars.autoboundary:
-        while(SR.sum(axis=0)[-1]>1):
+        while(SR.sum(axis=0)[-1]>1 and cache.cachegrid.T_grid[-1]<=chem.gibbsdata['Tref'][-1]):
             Pb *= 10
             Parr = np.logspace(np.log10(Pa), np.log10(Pb), pars.N)
             cache = funs.init_cache(Parr, chem)
@@ -520,6 +520,8 @@ def findbound(Pa, Pb, N, chem):
         Pb = Parr[bottomidx] * 2
         Parr = np.logspace(np.log10(Pa), np.log10(Pb), pars.N)
         cache = funs.init_cache(Parr, chem)
+        if cache.cachegrid.T_grid[-1] > chem.gibbsdata['Tref'][-1]:
+            print('WARNING: No Gibbs energy data given at the highest temperature. Extrapolating the Gibbs energy.')
         SR = getS(cache)
 
     # check unimportant species whose super saturation ratio is always smaller than 1
