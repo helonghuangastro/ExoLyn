@@ -513,6 +513,9 @@ def findbound(Pa, Pb, N, chem):
             # if the super saturation ratio is too low, there will be no cloud
             print('WARNING: total super saturation ratio smaller than 1 everywhere, the atmosphere is very clean.')
             bottomidx = N-1
+        elif np.all(SR.sum(axis=0)>1.):
+            print('WARNING: total super saturation ratio larger than 1 everywhere, may artificially truncate the cloud.')
+            bottomidx = N-1
         else:
             bottomidx = np.where((SR.sum(axis=0)[1:]<1) & (SR.sum(axis=0)[:-1]>1))[0][0]+1
         
