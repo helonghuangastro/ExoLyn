@@ -7,11 +7,17 @@ After compilation, you can run the code by `python3 relaxation.py`
 
 ## The structure of the code
 **parameters.py** will read in and store the parameters.txt file.
+
 **read.py** read in chemical data, i.e. reactions.txt and gibbs.txt.
+
 **init.py** initialize the code, finding appropriate boundary for the code and then finding initial, equilibrium chemical abundances.
+
 **atmosphere_class.py** defines an atmosphere class.
+
 **functions.py** contains the functions to be solved.
+
 **sol.f90** is a file to numerically solve the linear problem. It's much faster than the numpy solver.
+
 **draw.py** draws plots.
 
 ## Adding your reactions
