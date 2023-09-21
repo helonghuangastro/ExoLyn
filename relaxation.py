@@ -14,6 +14,7 @@ import init
 import pdb
 import atmosphere_class
 import read
+import sys
 
 class control():
     '''
@@ -179,7 +180,7 @@ def sol_py(X, B):
     for i in range(N-1, 0, -1):
         Xi = X[i-1]
 
-def newy(matsol, y0, bcb, atmosphere, **kwargs):
+def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
     '''
     solve for the guess for next iteration
     '''
@@ -194,7 +195,7 @@ def newy(matsol, y0, bcb, atmosphere, **kwargs):
     i = 0
     while(True):
         ynew = y0.copy()
-        ynew[:nvar, :-1] += dy/2**i
+        ynew[:nvar, :-1] += dy/2**i * alpha    # alpha is a parameter to limit the step. When the iteration becomes stuck, be more careful on the iteration.
         ynew[:nvar, -1] = bcb()[:nvar]
         ynew[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-18)    # It seems that this line is necessary. I forget why it is.
         atmosphere.update(ynew)
@@ -236,7 +237,7 @@ def postprocess(yn, ncond, ngas):
 
     return yn
 
-def relaxation(efun, dedy, bcb, atmosphere, fixxn=False, **kwargs):    
+def relaxation(efun, dedy, bcb, atmosphere, alpha=1, fixxn=False, **kwargs):    
     # calculate E, B matrix
     Emat = efun(atmosphere, **kwargs)
     if fixxn:
@@ -253,7 +254,7 @@ def relaxation(efun, dedy, bcb, atmosphere, fixxn=False, **kwargs):
     matsol = sol_f(dEdymat, Bmat)
 
     # solve for new y in next setp
-    ynew = newy(matsol, atmosphere.y, bcb, atmosphere, **kwargs)
+    ynew = newy(matsol, atmosphere.y, bcb, atmosphere, alpha, **kwargs)
 
     return ynew
 
@@ -275,11 +276,12 @@ def iterate(atmosphere, atmospheren, fparas, ctrl, isplot=False):
         ffail = np.array([1.])
         while(fsucc<1.):
             fpara = ffail[-1]
+            alpha = 1 - 0.1*(-np.log10((fpara-fsucc)/fpara))    # alpha is a parameter to limit the step. When the iteration becomes stuck, i.e. fpara becomes close to fsucc, be more careful on the iteration.
             kwargs[fpara_name] = fpara
             print('Converging ' + fpara_name + ' ' + str(fpara))
             atmospheren.update(atmosphere.y.copy())
             while(ctrl.status==100):
-                yn = relaxation(funs.E, funs.dEdy, funs.bcb, atmospheren, **kwargs)
+                yn = relaxation(funs.E, funs.dEdy, funs.bcb, atmospheren, alpha, **kwargs)
                 ctrl.update(ynew=yn)
             if ctrl.status==0:
                 atmosphere.update(yn)
@@ -294,6 +296,10 @@ def iterate(atmosphere, atmospheren, fparas, ctrl, isplot=False):
                     ffail = np.append(ffail, ffail[-1]/10)
                 else:
                     ffail = np.append(ffail, np.sqrt(fsucc*fpara))
+                # when the change in the fudging parameter becomes too small, quit the program and label it as fail
+                if fpara <= fsucc*1.0001 or fpara < 1e-10:
+                    print('ABORTION: stuck at ' + fpara_name + ' = ' + str(fpara))
+                    sys.exit(1)
         print('SUCCESS: converging ' + fpara_name)
         if isplot:
             myplot(Parr, atmosphere.y, ncond, ngas)
