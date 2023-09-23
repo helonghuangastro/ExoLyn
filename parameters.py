@@ -1,5 +1,6 @@
 import numpy as np
 import constants as cnt
+import sys
 
 def mygettype(valuestr):
     '''
@@ -39,7 +40,10 @@ def getfloat(valuestr):
 
 # get the local variables and parameter files
 paralist = locals()
-parafilename = 'parameters.txt'
+if len(sys.argv)>1:
+    parafilename = sys.argv[1]
+else:
+    parafilename = 'parameters.txt'
 
 with open(parafilename, 'r') as ipt:
     i = -1
