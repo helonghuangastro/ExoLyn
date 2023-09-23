@@ -356,12 +356,12 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
     xn = np.empty_like(Parr)
     Sbase = cachegrid.Sbase_grid
     lnSn = funs.lnSn(Parr, cachegrid.rho_grid)
-    iniguess = 1e-6*np.ones(len(reactions))
-    iniguess = np.append(iniguess, xn0[0])    # This should be changed to local xn0
+    iniguess = 1e-6*np.ones(len(reactions)+1)
 
     nulogxv = np.sum(nu * np.log(xvb), axis=1) # a vector with xr length
     SR = Sbase * np.atleast_2d(np.exp(nulogxv)).T    # super saturation ratio for cloud base
     status = np.ones_like(Parr) * 100    # save the status of finding initial condition: 0 for success; -1 and -2 for fail; 100 for not done now
+    Sfail = np.inf
     clearidx = np.where(SR.sum(axis=0)<1)[0]    # where the atmosphere is clear, without condensation
 
     # calculate hypothetical xn assuming very less condensation
@@ -372,43 +372,73 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
     # At this step preserve topidx and bottomidx, which is not as ugly as oversupersat parameter
     # loop over the cloud from upper down and try
     for i in range(len(Parr)):
-        # if no successful case, use local iniguess
-        if (status==100).all():
+        # set initial state
+        # if last grid point success, use it as initial guess
+        if status[i-1]==0:
+            iniguess[:-1] = nsolid[:, i-1]
+            iniguess[-1] = xn[i-1]
+        else:
             iniguess[-1] = xn0[i]
         if i in clearidx and i-1 not in clearidx:
             iniguess[-1] = xn_tmp[i]
             iniguess[:-1] = xn_tmp[i] * SR[:, i] / murc
-        flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i], lnSn[i])
+        if i-1 in clearidx and i not in clearidx:
+            iniguess[-1] = xn0[i]
+
+        # solve for the problem
+        # if S is too large, skip newton iteration
+        # TBD: This is not directly solving the problem, need to think of a way to solve it
+        if SR[:, i].sum() < Sfail:
+            try:
+                flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i], lnSn[i])
+            except TypeError:    # Sometimes the newton method returns error because the matrix is nearly singular.
+                flagsingle = -1
+        else:
+            flagsingle = -1
         status[i] = flagsingle
         if flagsingle == 0:
-            iniguess = result
             nsolid[:, i] = result[:-1]
             xn[i] = result[-1]
+        elif flagsingle == -1:    # update Sfail if necessary
+            Sfail = np.minimum(Sfail, SR[:, i].sum())
 
     # TBD: When the supersaturation ratio is too high, the code becomes very slow, because it cost ~0.1s for each grid point. Why is that? How to get rid of it?
     # Continue: Maybe could do the similar thing as I did in the main code: control the relative error and absolute error
     # TBD: a more elegant way would be always trying until the status is not upgraded in one loop
     # loop over the cloud from bottom up and try
     for i in range(len(Parr)-2, -1, -1):
+        # print(i)
         # TBD: a more elegant way would be looping over the fail intervals, for each interval, use the closest successful grid poing as iniguess
         if status[i]==0:
             iniguess[:-1] = nsolid[:, i]
             iniguess[-1] = xn[i]
             continue
-        flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i], lnSn[i])
+        if SR[:, i].sum() < Sfail:
+            flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i], lnSn[i])
+        else:
+            flagsingle = -1
         status[i] = flagsingle
         if flagsingle == 0:
             iniguess = result
             nsolid[:, i] = result[:-1]
             xn[i] = result[-1]
+        elif flagsingle == -1:
+            Sfail = np.minimum(Sfail, SR[:, i].sum())
 
     # insert super saturated values
     if (status<0).any():
         print('WARNING: Failure to find initial guess for some grid points. Extrapolate successful grids')
         failidx = np.where(status<0)[0]
-        for i in failidx:
-            nsolid[:, i] = nsolid[:, failidx[-1]+1]
-        xn[failidx] = xn[failidx[-1]+1]
+        if (np.diff(failidx)==1).all():
+            nsolid[:, failidx] = np.atleast_2d(nsolid[:, failidx[-1]+1]).T
+            xn[failidx] = xn[failidx[-1]+1]
+        else:
+            idx = np.where(np.diff(failidx)!=1)[0]+1    #idx is where the failidx is not continuous
+            idx = np.append(idx, len(failidx))
+            idx = np.insert(idx, 0, 0)
+            for i in range(len(idx)-1):
+                nsolid[:, failidx[idx[i]:idx[i+1]]] = np.atleast_2d(nsolid[:, failidx[idx[i+1]-1]+1]).T
+                xn[failidx[idx[i]:idx[i+1]]] = xn[failidx[idx[i+1]-1]+1]
 
     return nsolid, xn
 

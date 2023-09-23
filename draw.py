@@ -108,6 +108,7 @@ def myplot(Parr, y0, ncod, ngas, save=0, gasplot=pars.gas, solidplot=pars.solid)
     if save==1:
         plt.savefig('result.png', dpi=288)
     plt.show()
+    plt.clf()
 
     return
 

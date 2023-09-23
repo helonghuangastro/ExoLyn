@@ -90,7 +90,7 @@ class control():
             ynew = kwargs['ynew']
             if np.isnan(ynew).any():
                 print(f'NaN encountered.')
-                self.status = -2
+                self.status = -1
             elif self.count<self.dummy['wait']:
                 self.status = 100
             else:
@@ -188,9 +188,14 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
     Emat = funs.E(atmosphere, **kwargs)
     Eold = np.mean(np.abs(Emat))
 
-    dy = matsol
-    dy = np.minimum(dy, y0[:nvar, :-1])
-    dy = np.maximum(dy, -y0[:nvar, :-1]*0.5)
+    crel = 1.
+    cabs = 1e-10
+    maxincrease = crel * np.abs(y0[:nvar, :-1]) + cabs
+    maxdecrease = maxincrease / 2
+    # maxincrease = np.minimum(maxincrease, 99*y0[:nvar, :-1])    # This line seems to be useless
+    maxdecrease = np.minimum(maxdecrease, 0.99*y0[:nvar, :-1])
+    dy = np.minimum(matsol, maxincrease)
+    dy = np.maximum(matsol, -maxdecrease)
 
     i = 0
     while(True):
@@ -203,9 +208,8 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
         Enew = np.mean(np.abs(Emat))
         if Enew<Eold*1.5:
             break
-        if i>=10:
-            # TBD: This may fake the change to be <relerr
-            print(f'reduce the step by {2**i}')
+        if i>=5:
+            print(f'WARNING: In the non-linear regime, reduce the step by {2**i}')
             break
         i += 1
 
@@ -300,6 +304,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl, isplot=False):
                 if fpara <= fsucc*1.0001 or fpara < 1e-10:
                     print('ABORTION: stuck at ' + fpara_name + ' = ' + str(fpara))
                     sys.exit(1)
+
         print('SUCCESS: converging ' + fpara_name)
         if isplot:
             myplot(Parr, atmosphere.y, ncond, ngas)
@@ -321,10 +326,7 @@ if __name__ == '__main__':
 
     y0 = init.init(atmosphere, method='Newton')
     atmosphere.update(y0)
-    myplot(Parr, atmosphere.y, ncond, ngas)
-
-    # import sys
-    # sys.exit()
+    # myplot(Parr, atmosphere.y, ncond, ngas)
 
     ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
 
