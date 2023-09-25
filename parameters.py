@@ -140,3 +140,14 @@ with open(parafilename, 'r') as ipt:
 
         # save the attr to pars class
         paralist[paraname] = value
+
+## special treatment for parameters
+# special treatment for verbose
+if paralist['verbose'] == 'silent' or paralist['verbose'] == -2:
+    paralist['verboselevel'] = -2
+elif paralist['verbose'] == 'quiet' or paralist['verbose'] == -1:
+    paralist['verboselevel'] = -1
+elif paralist['verbose'] == 'default' or paralist['verbose'] == 0:
+    paralist['verboselevel'] = 0
+elif paralist['verbose'] == 'verbose' or paralist['verbose'] == 1:
+    paralist['verboselevel'] = 1

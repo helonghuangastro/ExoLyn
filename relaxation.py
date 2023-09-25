@@ -262,7 +262,7 @@ def relaxation(efun, dedy, bcb, atmosphere, alpha=1, fixxn=False, **kwargs):
 
     return ynew
 
-def iterate(atmosphere, atmospheren, fparas, ctrl, isplot=False):
+def iterate(atmosphere, atmospheren, fparas, ctrl):
     '''
     A function for converging any fudging parameters.
     Parameters:
@@ -287,6 +287,9 @@ def iterate(atmosphere, atmospheren, fparas, ctrl, isplot=False):
             while(ctrl.status==100):
                 yn = relaxation(funs.E, funs.dEdy, funs.bcb, atmospheren, alpha, **kwargs)
                 ctrl.update(ynew=yn)
+            # plot if verbose='verbose'
+            if pars.verboselevel >= 1:
+                myplot(Parr, atmospheren.y, ncond, ngas)
             if ctrl.status==0:
                 atmosphere.update(yn)
                 ctrl.clear()
@@ -306,7 +309,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl, isplot=False):
                     sys.exit(1)
 
         print('SUCCESS: converging ' + fpara_name)
-        if isplot:
+        if pars.verboselevel==0:
             myplot(Parr, atmosphere.y, ncond, ngas)
 
 if __name__ == '__main__':
@@ -326,8 +329,13 @@ if __name__ == '__main__':
 
     y0 = init.init(atmosphere, method='Newton')
     atmosphere.update(y0)
-    # myplot(Parr, atmosphere.y, ncond, ngas)
+    # plot the initial state
+    if pars.verboselevel >= 0:
+        myplot(Parr, atmosphere.y, ncond, ngas)
 
     ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
 
-    iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl, isplot=True)
+    iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
+
+    if pars.verboselevel == -1:
+        myplot(Parr, atmosphere.y, ncond, ngas)

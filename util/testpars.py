@@ -60,6 +60,9 @@ def writepars():
         opt.write('Pb = 1e7\n')
         opt.write('Pref = 1e6\n')
         opt.write('autoboundary = True\n')
+        opt.write('\n')
+
+        opt.write('verbose = \'silent\'')
 
     return
 

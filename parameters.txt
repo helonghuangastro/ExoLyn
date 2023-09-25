@@ -36,3 +36,5 @@ Pref = 1e6    # reference pressure at which the gibbs energy is measured
 
 autoboundary = True
 
+verbose = 'default'
+
