@@ -36,5 +36,5 @@ Pref = 1e6    # reference pressure at which the gibbs energy is measured
 
 autoboundary = True
 
-verbose = 'default'
+verbose = 'default'    # 'silent'=no pop-up figure; 'quiet'=only draw at the end; 'default'=plot once finished converging fpara; 'verbose'=plot for every fpara value
 
