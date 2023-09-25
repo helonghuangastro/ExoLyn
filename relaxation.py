@@ -314,7 +314,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
 
 if __name__ == '__main__':
     # read in all the chemistry data
-    chem = read.chemdata(pars.reactionfile, pars.gibbsfile)
+    chem = read.chemdata(pars.gibbsfile)
 
     # find the boundary of the domain
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)

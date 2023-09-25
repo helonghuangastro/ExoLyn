@@ -49,6 +49,8 @@ with open(parafilename, 'r') as ipt:
     i = -1
     for line in ipt:
         i += 1
+        if line.startswith('====='):
+            break
         # ignore comment and space line
         if line.startswith('#') or line.isspace():
             continue
