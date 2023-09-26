@@ -1,22 +1,23 @@
 opa_IR = 0.3    # opacity in IR, cm^2 g^-1
-g = 2192    # gravitational acceleration, cm s^-1
+g = 2192        # gravitational acceleration, cm s^-1
 firr = 1 / 4    # radiation distribution
 opa_vis_IR = 0.158    # opacity ratio between visual and IR
-T_int = 500    # interior temperature, K
+T_int = 500     # interior temperature, K
 mgas = 2.34 * cnt.mu    # gas molecular weight, g
-Kzz = 1e8    # diffusion, cm^2s^-1
-Kp = 1e8    # particle diffusivity, cm^2s^-1
-cs_mol = 2e-15    # molecular cross section, cm^2
+Kzz = 1e8       # diffusion, cm^2s^-1
+Kp = 1e8        # particle diffusivity, cm^2s^-1
+cs_mol = 2e-15  # molecular cross section, cm^2
 
 f_stick = 1.
-cs_com = 8e-15    # common cross section, cm^2
-rho_int = 2.8    # particle internal density, g cm^-3
-an = 1e-7    # nucleation radius, cm
+cs_com = 8e-15  # (WHAT?) common cross section, cm^2
+rho_int = 2.8   # particle internal density, g cm^-3
+an = 1e-7       # nucleation radius, cm
 mn0 = 4 / 3 * np.pi * rho_int * an ** 3    # nucleation mass, g
-nuc_pro = 1e-15    # nuclei productio rate, g cm^-2 s^-1
-sigma_nuc = 0.2    # width of nucleation profile
-P_star = 60    # nucleation height, in cgs
+nuc_pro = 1e-15 # (integrated) nuclei productio rate, g cm^-2 s^-1
+sigma_nuc = 0.2 # width of the nucleation profile
+P_star = 60     # nucleation height, in cgs
 
+## So I would suggest to remove the solid list as these elements are given in the reaction table below
 solid = ['MgSiO3', 'Mg2SiO4', 'SiO2', 'MgO', 'FeO', 'Fe2O3', 'FeS', 'Fe', 'TiO2', 'Al2O3']
 gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
 xvb = [7.56e-4, 1.32e-3, 1e-3, 1e-3, 8e-4, 1e-5, 7e-5]
@@ -24,19 +25,36 @@ reactionfile = 'reactions.txt'
 gibbsfile = 'gibbs.txt'
 
 T_star = 5778    # stellar temperature, K
-R_star = cnt.R_sun    # stellar radius, cm
+R_star = cnt.R_sun  # stellar radius, cm
 
-Rp = 1.087 * cnt.Rj    # planet radius, cm
-rp = 0.05 * cnt.au    # planet orbital radius, cm
+Rp = 1.087 * cnt.Rj # planet radius, cm
+rp = 0.05 * cnt.au  # planet orbital radius, cm
 
 N = 700
-Pa = 1.    # pressure at the upper limit of atmosphere, in cgs units
-Pb = 1e7    # pressure at the lower limit of atmosphere, in cgs units
-Pref = 1e6    # reference pressure at which the gibbs energy is measured
+Pa = 1.         # pressure at the upper limit of atmosphere, in cgs units
+Pb = 1e7        # pressure at the lower limit of atmosphere, in cgs units
+Pref = 1e6      # reference pressure at which the gibbs energy is measured
 
-autoboundary = True
+autoboundary = True     #please describe what does this does
 
-verbose = 'default'    # 'silent'=no pop-up figure; 'quiet'=only draw at the end; 'default'=plot once finished converging fpara; 'verbose'=plot for every fpara value
+# choose one of [silent,quiet,default,verbose] 
+# -- 'silent'=no pop-up figure; 
+# -- 'quiet'=only draw at the end; 
+# -- 'default'=plot once finished converging fpara; 
+# -- 'verbose'=plot for every fpara value
+
+verbose = 'verbose'     
+
+
+##choose w/r to show and/or save intermediate files.
+# -- 'all'      :do all of the below
+# -- 'save'     :save intermediate data to png file
+# -- 'popup'    :draw to inspect
+# -- 'final'    :only draw at end
+# -- 'none'     :do nothing 
+
+savemode = 1 #the string characterization above is better (not implemented)...
+
 
 ============ put reactions here =============
 Mg + SiO + 2H2O -> MgSiO3(s) + 2H2

@@ -268,7 +268,6 @@ def bcb():
 def TP(Parr):
     opa_IR = pars.opa_IR    # opacity in IR
     g = pars.g    # gravitational acceleration
-    firr = pars.firr    # distribution
     opa_vis_IR = pars.opa_vis_IR    # opacity ratio between visual and IR
 
     T_int = pars.T_int    # interior temperature
@@ -276,7 +275,7 @@ def TP(Parr):
 
     opt_dep = opa_IR * Parr / g    # optical depth
     # Eq (1) in OrmelMin2019
-    T = (3/4*T_int**4 * (2/3+opt_dep) + 3/4*T_irr**4*firr * (2/3 + 1/(np.sqrt(3)*opa_vis_IR) + (opa_vis_IR-1/opa_vis_IR)*np.exp(-opa_vis_IR*opt_dep*np.sqrt(3))/np.sqrt(3)))**0.25
+    T = (3/4*T_int**4 * (2/3+opt_dep) + 3/4*T_irr**4*pars.firr * (2/3 + 1/(np.sqrt(3)*opa_vis_IR) + (opa_vis_IR-1/opa_vis_IR)*np.exp(-opa_vis_IR*opt_dep*np.sqrt(3))/np.sqrt(3)))**0.25
 
     return T
 

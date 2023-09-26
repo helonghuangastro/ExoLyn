@@ -70,7 +70,7 @@ def myplot_v2(Parr, y0, ncod, ngas, save=0):
 
     return
 
-def myplot(Parr, y0, ncod, ngas, save=0, gasplot=pars.gas, solidplot=pars.solid):
+def myplot(Parr, y0, ncod, ngas, gasplot=pars.gas, solidplot=pars.solid, savemode=0):
     '''plot the solid and gas concentrations'''
     s = funs.cal_ap(y0[:ncod], y0[-1])
 
@@ -105,9 +105,11 @@ def myplot(Parr, y0, ncod, ngas, save=0, gasplot=pars.gas, solidplot=pars.solid)
 
     plt.subplots_adjust(left=0.1, right=0.77, bottom=0.1, top=0.9, hspace=0, wspace=0)
 
-    if save==1:
+    if savemode==1:
         plt.savefig('result.png', dpi=288)
-    plt.show()
+    else:
+        plt.show()
+
     plt.clf()
 
     return

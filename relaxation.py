@@ -65,7 +65,7 @@ class control():
                 self.ybest = y.copy()
             self.Earr = np.append(self.Earr, E)
             if np.isnan(E):
-                print('did not converge to the desired error tolerance.')
+                print('[relaxation]did not converge to the desired error tolerance.')
                 self.status = -2
             elif self.count<self.dummy['wait']:
                 self.status = 100
@@ -74,14 +74,14 @@ class control():
                     if np.min(self.Earr)<self.elast * 1.5:
                         self.status = 0
                     else:
-                        print(f'did not converge to desired error tolerance. Error: {E}')
+                        print(f'[relaxation]did not converge to desired error tolerance. Error: {E}')
                         self.status = -2
                 else:
                     if self.count>self.dummy['maxitr']:
                         if E<self.elast*1.5:
                             self.status = 0
                         else:
-                            print(f'exceed maximum iteration {self.maxitr}')
+                            print(f'[relaxation]exceed maximum iteration {self.maxitr}')
                             self.status = -1
                     else:
                         self.status = 100
@@ -289,7 +289,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
                 ctrl.update(ynew=yn)
             # plot if verbose='verbose'
             if pars.verboselevel >= 1:
-                myplot(Parr, atmospheren.y, ncond, ngas)
+                myplot(Parr, atmospheren.y, ncond, ngas, savemode=pars.savemode)
             if ctrl.status==0:
                 atmosphere.update(yn)
                 ctrl.clear()
@@ -310,7 +310,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
 
         print('SUCCESS: converging ' + fpara_name)
         if pars.verboselevel==0:
-            myplot(Parr, atmosphere.y, ncond, ngas)
+            myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
 
 if __name__ == '__main__':
     # read in all the chemistry data
@@ -318,6 +318,7 @@ if __name__ == '__main__':
 
     # find the boundary of the domain
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
+
 
     logP = np.log(Parr)
     dx = logP[1]-logP[0]
@@ -331,11 +332,11 @@ if __name__ == '__main__':
     atmosphere.update(y0)
     # plot the initial state
     if pars.verboselevel >= 0:
-        myplot(Parr, atmosphere.y, ncond, ngas)
+        myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
 
     ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
 
     iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
 
     if pars.verboselevel == -1:
-        myplot(Parr, atmosphere.y, ncond, ngas)
+        myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
