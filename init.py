@@ -399,46 +399,57 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
         if flagsingle == 0:
             nsolid[:, i] = result[:-1]
             xn[i] = result[-1]
-        elif flagsingle == -1:    # update Sfail if necessary
+        elif flagsingle == -1 and SR[:, i].sum()>10:    # update Sfail if necessary
             Sfail = np.minimum(Sfail, SR[:, i].sum())
 
     # TBD: When the supersaturation ratio is too high, the code becomes very slow, because it cost ~0.1s for each grid point. Why is that? How to get rid of it?
     # Continue: Maybe could do the similar thing as I did in the main code: control the relative error and absolute error
     # TBD: a more elegant way would be always trying until the status is not upgraded in one loop
     # loop over the cloud from bottom up and try
-    for i in range(len(Parr)-2, -1, -1):
-        # print(i)
-        # TBD: a more elegant way would be looping over the fail intervals, for each interval, use the closest successful grid poing as iniguess
-        if status[i]==0:
-            iniguess[:-1] = nsolid[:, i]
-            iniguess[-1] = xn[i]
-            continue
-        if SR[:, i].sum() < Sfail:
-            flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i], lnSn[i])
-        else:
-            flagsingle = -1
-        status[i] = flagsingle
-        if flagsingle == 0:
-            iniguess = result
-            nsolid[:, i] = result[:-1]
-            xn[i] = result[-1]
-        elif flagsingle == -1:
-            Sfail = np.minimum(Sfail, SR[:, i].sum())
+    # It seems that this step is not necessary
+    # for i in range(len(Parr)-2, -1, -1):
+    #     # print(i)
+    #     # TBD: a more elegant way would be looping over the fail intervals, for each interval, use the closest successful grid poing as iniguess
+    #     if status[i]==0:
+    #         iniguess[:-1] = nsolid[:, i]
+    #         iniguess[-1] = xn[i]
+    #         continue
+    #     if SR[:, i].sum() < Sfail:
+    #         flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i], lnSn[i])
+    #     else:
+    #         flagsingle = -1
+    #     status[i] = flagsingle
+    #     if flagsingle == 0:
+    #         iniguess = result
+    #         nsolid[:, i] = result[:-1]
+    #         xn[i] = result[-1]
+    #     elif flagsingle == -1:
+    #         Sfail = np.minimum(Sfail, SR[:, i].sum())
 
     # insert super saturated values
     if (status<0).any():
         print('WARNING: Failure to find initial guess for some grid points. Extrapolate successful grids')
         failidx = np.where(status<0)[0]
-        if (np.diff(failidx)==1).all():
-            nsolid[:, failidx] = np.atleast_2d(nsolid[:, failidx[-1]+1]).T
-            xn[failidx] = xn[failidx[-1]+1]
+        if failidx[0]==0:
+            endi = 0
         else:
-            idx = np.where(np.diff(failidx)!=1)[0]+1    #idx is where the failidx is not continuous
-            idx = np.append(idx, len(failidx))
-            idx = np.insert(idx, 0, 0)
-            for i in range(len(idx)-1):
-                nsolid[:, failidx[idx[i]:idx[i+1]]] = np.atleast_2d(nsolid[:, failidx[idx[i+1]-1]+1]).T
-                xn[failidx[idx[i]:idx[i+1]]] = xn[failidx[idx[i+1]-1]+1]
+            endi = -1
+        idx = np.where(np.diff(failidx)!=1)[0]+1    #idx is where the failidx is not continuous
+        idx = np.append(idx, len(failidx))
+        idx = np.insert(idx, 0, 0)
+        for i in range(len(idx)-2, endi, -1):
+            nfail = failidx[idx[i+1]-1]-failidx[idx[i]]+1    # number of failed grid points in each sector
+            interplever = (np.arange(nfail)+1)/(nfail+1)     # leverage to interpolate the failed points from the neighbouring successful cases
+            rightcontrib = np.atleast_2d(nsolid[:, failidx[idx[i+1]-1]+1]).T * interplever
+            leftcontrib = np.atleast_2d(nsolid[:, failidx[idx[i]]-1]).T * (1-interplever)
+            nsolid[:, failidx[idx[i]:idx[i+1]]] = rightcontrib + leftcontrib
+            rightcontrib = xn[failidx[idx[i+1]-1]+1] * interplever
+            leftcontrib = xn[failidx[idx[i]]-1] * (1-interplever)
+            xn[failidx[idx[i]:idx[i+1]]] = rightcontrib + leftcontrib
+        if failidx[0]==0:
+            # process the first sector
+            nsolid[:, :(failidx[idx[1]-1]+1)] = np.atleast_2d(nsolid[:, failidx[idx[1]-1]+1]).T
+            xn[:(failidx[idx[1]-1]+1)] = xn[failidx[idx[1]-1]+1]
 
     return nsolid, xn
 
@@ -497,6 +508,14 @@ def init(atmosphere, method):
         solidindex = reactions[i].solidindex
         y0[solidindex] += atmosphere.chem.molecules[pars.solid[solidindex]+'(s)'].mu * nsolid[i]
         y0[ncod:(ncod+ngas)] -= np.atleast_2d(nu[i]*muv).T*nsolid[i]    # gas concentration -= n*mu
+
+    # post process the gas to be larger than 0. Previous step may introduce numerical error, leading to negative or 0 where it should not.
+    for i in range(ngas):
+        if (y0[ncod+i]<=0).any():
+            ispos = y0[ncod+i]>0
+            smallestpos = np.min(y0[ncod+i][ispos])
+            y0[ncod+i, ~ispos] = smallestpos
+
     print('SUCCESS: Find initial condition')
 
     # If in the future the code do not work, maybe this could save it.

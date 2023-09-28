@@ -206,7 +206,7 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
         atmosphere.update(ynew)
         Emat = funs.E(atmosphere, **kwargs)
         Enew = np.mean(np.abs(Emat))
-        if Enew<Eold*1.5:
+        if Enew<Eold*1.2:
             break
         if i>=5:
             print(f'WARNING: In the non-linear regime, reduce the step by {2**i}')
