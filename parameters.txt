@@ -35,7 +35,7 @@ Pref = 1e6      # reference pressure at which the gibbs energy is measured
 
 autoboundary = True     #please describe what does this does
 
-# choose one of [silent,quiet,default,verbose] 
+## choose one of [silent,quiet,default,verbose] 
 # -- 'silent'= no pop-up figure; 
 # -- 'quiet'= only draw at the end; 
 # -- 'default'= plot once finished converging fpara; 
@@ -48,10 +48,9 @@ verbose = 'verbose'
 # -- 'all'      :do all of the below
 # -- 'save'     :save intermediate data to png file
 # -- 'popup'    :draw to inspect
-# -- 'final'    :only draw at end
 # -- 'none'     :do nothing 
 
-savemode = 1 #the string characterization above is better (not implemented)...
+savemode = 'popup'
 
 
 ============ put reactions here =============

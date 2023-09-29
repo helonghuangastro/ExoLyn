@@ -116,9 +116,9 @@ def myplot(Parr, y0, ncod, ngas, savemode=0, **kwargs):
 
     plt.subplots_adjust(left=0.1, right=0.77, bottom=0.1, top=0.9, hspace=0, wspace=0)
 
-    if savemode==1:
+    if savemode=='all' or savemode=='save':
         plt.savefig('result.png', dpi=288)
-    else:
+    if savemode=='all' or savemode=='popup':
         plt.show()
 
     plt.clf()

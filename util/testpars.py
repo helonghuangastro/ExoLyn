@@ -32,8 +32,6 @@ def writepars():
         opt.write('P_star = ' + str(P_star_range[0]**(1-rn)*P_star_range[1]**rn) + '\n')
         opt.write('\n')
 
-        opt.write('solid = ' + str(solid))
-        opt.write('\n')
         opt.write('gas = ' + str(gas))
         opt.write('\n')
         rnarr = np.random.rand(len(gas))
@@ -62,7 +60,22 @@ def writepars():
         opt.write('autoboundary = True\n')
         opt.write('\n')
 
-        opt.write('verbose = \'silent\'')
+        opt.write('verbose = \'silent\'\n')
+        opt.write('savemode = \'none\'\n')
+        opt.write('\n')
+
+        opt.write('============ put reactions here =============\n')
+        opt.write('Mg + SiO + 2H2O -> MgSiO3(s) + 2H2\n')
+        opt.write('2Mg + SiO + 3H2O -> Mg2SiO4(s) + 3H2\n')
+        opt.write('SiO + H2O -> SiO2(s) + H2\n')
+        opt.write('Mg + H2O -> MgO(s) + H2\n')
+        opt.write('Fe + H2O -> FeO(s) + H2\n')
+        opt.write('Fe + H2S -> FeS(s) + H2\n')
+        opt.write('2Fe + 3H2O -> Fe2O3(s) + 3H2\n')
+        opt.write('Fe -> Fe(s)\n')
+        opt.write('TiO + H2O -> TiO2(s) + H2\n')
+        opt.write('2Al + 3H2O -> Al2O3(s) + 3H2\n')
+        opt.write('\n')
 
     return
 
@@ -85,7 +98,8 @@ T_star_range = [3000, 8000]
 failcount = 0
 totaltime = 0
 succtime = 0
-for i in range(100):
+N = 100
+for i in range(N):
     print(i)
 
     writepars()
@@ -118,4 +132,4 @@ for i in range(100):
 
 print('Failed cases: ' + str(failcount))
 print('Total time: ' + str(totaltime) + ' s')
-print('Average successful time: ' + str(succtime/(100-failcount)) + ' s')
+print('Average successful time: ' + str(succtime/(N-failcount)) + ' s')

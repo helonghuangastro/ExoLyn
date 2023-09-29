@@ -1,11 +1,11 @@
 opa_IR = 0.3
-g = 820.8474130215526
+g = 13805.608474936056
 firr = 1 / 4
 opa_vis_IR = 0.158
-T_int = 443.8604349860818
+T_int = 782.6749695280743
 mgas = 2.34 * cnt.mu
-Kzz = 10098709.320118725
-Kp = 10098709.320118725
+Kzz = 123008664.6780507
+Kp = 123008664.6780507
 cs_mol = 2e-15
 
 f_stick = 1.
@@ -13,17 +13,16 @@ cs_com = 8e-15
 rho_int = 2.8
 an = 1e-7
 mn0 = 4 / 3 * np.pi * rho_int * an ** 3
-nuc_pro = 1.923300055500044e-18
-sigma_nuc = 0.275522664447147
-P_star = 22.46874136207439
+nuc_pro = 1.8558056318820024e-18
+sigma_nuc = 0.30994627510672657
+P_star = 119.3915426819984
 
-solid = ['MgSiO3', 'Mg2SiO4', 'SiO2', 'MgO', 'FeO', 'Fe2O3', 'FeS', 'Fe', 'TiO2', 'Al2O3']
 gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
-xvb = [0.0048133570002704415, 0.005968144676294524, 0.001282209766940826, 0.002187102008616828, 0.0005081256412902709, 2.808214367701396e-05, 0.0003284611721419149]
+xvb = [8.231199322213975e-05, 0.005354805561382694, 0.002541411760639058, 0.009358014281199699, 0.00016266347796363952, 2.18656900247232e-06, 2.064042073934946e-05]
 reactionfile = '../reactions.txt'
 gibbsfile = '../gibbs.txt'
 
-T_star = 5992.903767224507
+T_star = 3610.7797526994837
 R_star = cnt.R_sun
 
 Rp = 1.087 * cnt.Rj
@@ -34,3 +33,19 @@ Pa = 1.
 Pb = 1e7
 Pref = 1e6
 autoboundary = True
+
+verbose = 'silent'
+savemode = 'none'
+
+============ put reactions here =============
+Mg + SiO + 2H2O -> MgSiO3(s) + 2H2
+2Mg + SiO + 3H2O -> Mg2SiO4(s) + 3H2
+SiO + H2O -> SiO2(s) + H2
+Mg + H2O -> MgO(s) + H2
+Fe + H2O -> FeO(s) + H2
+Fe + H2S -> FeS(s) + H2
+2Fe + 3H2O -> Fe2O3(s) + 3H2
+Fe -> Fe(s)
+TiO + H2O -> TiO2(s) + H2
+2Al + 3H2O -> Al2O3(s) + 3H2
+
