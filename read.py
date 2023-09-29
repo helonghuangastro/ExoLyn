@@ -8,12 +8,17 @@ class chemdata():
         self.gibbsdata = np.genfromtxt(gibbs_file, names=True, deletechars='', comments='#')
         self.mollist = []    # name of all molecules
         self.molecules = {}    # store all the molecular data
+        self.solidindex = []
         self.reactions = self.get_reaction(pars.parafilename)
-        self.reactionidx = [self.molecules[solid+'(s)'].reactionidx for solid in pars.solid]
         self.mugas = np.array([self.molecules[gas].mu for gas in pars.gas])
-        self.musolid = np.array([self.molecules[solid+'(s)'].mu for solid in pars.solid])
         for reaction in self.reactions:
             reaction.cal_dG(self.gibbsdata, self.molecules)
+        solidlist = [molename.strip('(s)') for molename in self.mollist if molename.endswith('(s)')]    # all the solid that appear in the reactions
+        self.reactionidx = [self.molecules[solid+'(s)'].reactionidx for solid in solidlist]    # the index of reaction that correspond to each solid
+        self.musolid = np.array([self.molecules[solid+'(s)'].mu for solid in solidlist])    # the molecular weight for each solid
+        for reaction in self.reactions:
+            reaction.solidindex = solidlist.index(reaction.solid)    # the index of solid in the solidlist
+        pars.solid = solidlist
 
     def get_reaction(self, filename):
         reactions = []
@@ -88,9 +93,6 @@ class reaction():
         '''
         compare the reaction with the vapor and solid species in parameters.py to get the contribution to the species we considered
         '''
-        for molecule in self.product.keys():
-            if molecule.strip('(s)') in pars.solid:
-                self.solidindex = pars.solid.index(molecule.strip('(s)'))    # the index of the product solid in the solid list
         self.gasst = np.zeros(len(pars.gas))
         for i, gas in enumerate(pars.gas):
             if gas in self.reactant.keys():

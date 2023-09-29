@@ -70,7 +70,7 @@ def myplot_v2(Parr, y0, ncod, ngas, save=0):
 
     return
 
-def myplot(Parr, y0, ncod, ngas, gasplot=pars.gas, solidplot=pars.solid, savemode=0):
+def myplot(Parr, y0, ncod, ngas, savemode=0, **kwargs):
     '''plot the solid and gas concentrations'''
     s = funs.cal_ap(y0[:ncod], y0[-1])
 
@@ -79,7 +79,18 @@ def myplot(Parr, y0, ncod, ngas, gasplot=pars.gas, solidplot=pars.solid, savemod
 
     axs.loglog(s*1e3, Parr/1e6, label='size', color=[0.7,0.7,0.7, 0.7], linewidth=3)    # divide by 1e6 to convert cgs to bar
 
+    # select certain species
+    if 'gasplot' in kwargs.keys():
+        gasplot = kwargs['gasplot']
+    else:
+        gasplot = pars.gas
+    if 'solidplot' in kwargs.keys():
+        solidplot = kwargs['solidplot']
+    else:
+        solidplot = pars.solid
+
     lnarr = []
+
     for i in range(ncod):
         if pars.solid[i] in solidplot:
             l, = ax.loglog(y0[i], Parr/1e6, label=pars.solid[i]+'(s)')
