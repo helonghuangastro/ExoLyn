@@ -172,4 +172,4 @@ def get_mole(moleterm):
         st = int(moleterm[:i])
     return st, molename
 
-element_data = {'H':1, 'He':4, 'O':16, 'Mg':24, 'Al':27, 'Si':28, 'S':32, 'Ca':40, 'Ti':48, 'Fe':56}    # all element data 
+element_data = {'H':1, 'He':4, 'N':14, 'O':16, 'Mg':24, 'Al':27, 'Si':28, 'S':32, 'Ca':40, 'Ti':48, 'Fe':56}    # all element data 
