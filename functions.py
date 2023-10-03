@@ -266,16 +266,25 @@ def bcb():
     return np.hstack((np.zeros(len(pars.solid)), pars.xvb, 0))
 
 def TP(Parr):
-    opa_IR = pars.opa_IR    # opacity in IR
-    g = pars.g    # gravitational acceleration
-    opa_vis_IR = pars.opa_vis_IR    # opacity ratio between visual and IR
+    # Guillot 2010 expression for T-P profile
+    if not hasattr(pars, 'TPmode') or pars.TPmode=='Guillot2010':
+        opa_IR = pars.opa_IR    # opacity in IR
+        g = pars.g    # gravitational acceleration
+        opa_vis_IR = pars.opa_vis_IR    # opacity ratio between visual and IR
 
-    T_int = pars.T_int    # interior temperature
-    T_irr = pars.T_star * np.sqrt(pars.R_star/pars.rp)    # irradiation temperature
+        T_int = pars.T_int    # interior temperature
+        T_irr = pars.T_star * np.sqrt(pars.R_star/pars.rp)    # irradiation temperature
 
-    opt_dep = opa_IR * Parr / g    # optical depth
-    # Eq (1) in OrmelMin2019
-    T = (3/4*T_int**4 * (2/3+opt_dep) + 3/4*T_irr**4*pars.firr * (2/3 + 1/(np.sqrt(3)*opa_vis_IR) + (opa_vis_IR-1/opa_vis_IR)*np.exp(-opa_vis_IR*opt_dep*np.sqrt(3))/np.sqrt(3)))**0.25
+        opt_dep = opa_IR * Parr / g    # optical depth
+        # Eq (1) in OrmelMin2019
+        T = (3/4*T_int**4 * (2/3+opt_dep) + 3/4*T_irr**4*pars.firr * (2/3 + 1/(np.sqrt(3)*opa_vis_IR) + (opa_vis_IR-1/opa_vis_IR)*np.exp(-opa_vis_IR*opt_dep*np.sqrt(3))/np.sqrt(3)))**0.25
+    # Interpolate from given T-P profile
+    elif pars.TPmode=='interp':
+        TPdata = np.genfromtxt(pars.TPfile, names=True, deletechars='', comments='#')
+        logP = np.log10(Parr)
+        logP_ref = np.log10(TPdata['P_ref'])
+
+        T = np.interp(logP, logP_ref, TPdata['T_ref'])
 
     return T
 
