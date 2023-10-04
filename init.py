@@ -9,6 +9,14 @@ import functions as funs
 from scipy.integrate import quad
 from scipy.optimize import root
 import pdb
+import sys
+
+def check_input_errors ():
+
+    if pars.xvb.shape[0]!=len(pars.gas):
+        print('[init]ERROR:dimensions of >>xvb<< and >>gas<< in parameters.txt are inconsistent!')
+        sys.exit()
+
 
 def condscipy(Parr, reactions, cache, nu, muv, murc, xn):
     ''' Need more test '''
@@ -428,7 +436,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
 
     # insert super saturated values
     if (status<0).any():
-        print('WARNING: Failure to find initial guess for some grid points. Extrapolate successful grids')
+        print('[init]WARNING: Failure to find initial guess for some grid points. Extrapolate successful grids')
         failidx = np.where(status<0)[0]
         if failidx[0]==0:
             endi = 0
@@ -516,7 +524,7 @@ def init(atmosphere, method):
             smallestpos = np.min(y0[ncod+i][ispos])
             y0[ncod+i, ~ispos] = smallestpos
 
-    print('SUCCESS: Find initial condition')
+    print('[init]SUCCESS: Find initial condition')
 
     # If in the future the code do not work, maybe this could save it.
     # is this really necessary? I tested default, Kzz=1e6, T=3000K, T=8000K, this is not needed.
@@ -560,10 +568,10 @@ def findbound(Pa, Pb, N, chem):
         # find the bottom of cloud where everything evaporates
         if np.all(SR.sum(axis=0)<1.):
             # if the super saturation ratio is too low, there will be no cloud
-            print('WARNING: total super saturation ratio smaller than 1 everywhere, the atmosphere is very clean.')
+            print('[init]WARNING: total super saturation ratio smaller than 1 everywhere, the atmosphere is very clean.')
             bottomidx = N-1
         elif np.all(SR.sum(axis=0)>1.):
-            print('WARNING: total super saturation ratio larger than 1 everywhere, may artificially truncate the cloud.')
+            print('[init]WARNING: total super saturation ratio larger than 1 everywhere, may artificially truncate the cloud.')
             bottomidx = N-1
         else:
             bottomidx = np.where((SR.sum(axis=0)[1:]<1) & (SR.sum(axis=0)[:-1]>1))[0][0]+1
@@ -573,14 +581,14 @@ def findbound(Pa, Pb, N, chem):
         Parr = np.logspace(np.log10(Pa), np.log10(Pb), pars.N)
         cache = funs.init_cache(Parr, chem)
         if cache.cachegrid.T_grid[-1] > chem.gibbsdata['Tref'][-1]:
-            print('WARNING: No Gibbs energy data given at the highest temperature. Extrapolating the Gibbs energy.')
+            print('[init]WARNING: No Gibbs energy data given at the highest temperature. Extrapolating the Gibbs energy.')
         SR = getS(cache)
 
     # check unimportant species whose super saturation ratio is always smaller than 1
     for i, reaction in enumerate(cache.chem.reactions):
         if np.all(SR[i]<1.):
-            print('INFO: ' + reaction.solid + ' is an unimportant species with super saturation ratio < 1 everywhere.')
+            print('[init]INFO: ' + reaction.solid + ' is an unimportant species with super saturation ratio < 1 everywhere.')
     
-    print('SUCCESS: finding domain for the problem.')
+    print('[init]SUCCESS: finding domain for the problem.')
 
     return Parr, cache

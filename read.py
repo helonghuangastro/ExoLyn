@@ -10,6 +10,7 @@ class chemdata():
         self.molecules = {}    # store all the molecular data
         self.solidindex = []
         self.reactions = self.get_reaction(pars.parafilename)
+        ## I get an error here when gas is in pars.gas but not in self.molecules I think...
         self.mugas = np.array([self.molecules[gas].mu for gas in pars.gas])
         for reaction in self.reactions:
             reaction.cal_dG(self.gibbsdata, self.molecules)

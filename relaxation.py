@@ -209,7 +209,7 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
         if Enew<Eold*1.2:
             break
         if i>=5:
-            print(f'WARNING: In the non-linear regime, reduce the step by {2**i}')
+            print(f'[relaxation]WARNING: In the non-linear regime, reduce the step by {2**i}')
             break
         i += 1
 
@@ -282,7 +282,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
             fpara = ffail[-1]
             alpha = 1 - 0.1*(-np.log10((fpara-fsucc)/fpara))    # alpha is a parameter to limit the step. When the iteration becomes stuck, i.e. fpara becomes close to fsucc, be more careful on the iteration.
             kwargs[fpara_name] = fpara
-            print('Converging ' + fpara_name + ' ' + str(fpara))
+            print('[relaxation]Converging on ' + fpara_name + ' at ' + str(fpara))
             atmospheren.update(atmosphere.y.copy())
             while(ctrl.status==100):
                 yn = relaxation(funs.E, funs.dEdy, funs.bcb, atmospheren, alpha, **kwargs)
@@ -308,11 +308,19 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
                     print('ABORTION: stuck at ' + fpara_name + ' = ' + str(fpara))
                     sys.exit(1)
 
-        print('SUCCESS: converging ' + fpara_name)
+        print('[relaxation]SUCCESS: converged on >> ' + fpara_name +' <<')
         if pars.verboselevel==0:
             myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
 
 if __name__ == '__main__':
+
+    init.check_input_errors ()
+
+    #suppress warnings
+    if pars.suppresswarnings=='all':
+        import warnings
+        warnings.filterwarnings('ignore')
+
     # read in all the chemistry data
     chem = read.chemdata(pars.gibbsfile)
 
@@ -337,6 +345,7 @@ if __name__ == '__main__':
     ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
 
     iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
+    print('[main]it is now time to generate an output table (!!)')
 
     if pars.verboselevel == -1:
         myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
