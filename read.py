@@ -8,7 +8,6 @@ class chemdata():
         self.gibbsdata = np.genfromtxt(gibbs_file, names=True, deletechars='', comments='#')
         self.mollist = []    # name of all molecules
         self.molecules = {}    # store all the molecular data
-        self.solidindex = []
         self.reactions = self.get_reaction(pars.parafilename)
         ## I get an error here when gas is in pars.gas but not in self.molecules I think...
         self.mugas = np.array([self.molecules[gas].mu for gas in pars.gas])
@@ -19,6 +18,8 @@ class chemdata():
         self.musolid = np.array([self.molecules[solid+'(s)'].mu for solid in solidlist])    # the molecular weight for each solid
         for reaction in self.reactions:
             reaction.solidindex = solidlist.index(reaction.solid)    # the index of solid in the solidlist
+        self.solidindex = np.array([solidlist.index(reaction.solid) for reaction in self.reactions])
+        self.gasst = np.array([reaction.gasst for reaction in self.reactions])    # gas stoichemics for all reactions
         pars.solid = solidlist
 
     def get_reaction(self, filename):

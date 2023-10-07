@@ -220,15 +220,16 @@ def dEdysrc(atmosphere, y1, pref_src, econ0, exnsrc0, **kwargs):
     exnsrc = np.insert(exnsrc, 0, 0)
 
     # calculate new econ
-    Sc = np.zeros((len(reactions), atmosphere.N))
+    # Sc = np.zeros((len(reactions), atmosphere.N))
     mugas = np.atleast_2d(atmosphere.chem.mugas).T
     mucond = atmosphere.chem.musolid
-    # TBD: A pythonic way to get rid of the for loops
-    for i, reaction in enumerate(reactions):
-        solidindex = reaction.solidindex
-        gasst = reaction.gasst
-        Sc[i] = cal_Sc(xv, aparr, n_parr, bs[solidindex], gasst, solidindex, i, cache_grid, mugas, mucond)
-    econ = (Sc * pref_src)[:, :-1]    # no source term for the boundary condition
+    # for i, reaction in enumerate(reactions):
+    #     solidindex = reaction.solidindex
+    #     gasst = reaction.gasst
+    #     Sc[i] = cal_Sc(xv, aparr, n_parr, bs[solidindex], gasst, solidindex, i, cache_grid, mugas, mucond)
+    Sc2 = cal_Sc_all(xv, aparr, n_parr, bs, atmosphere.chem, cache_grid)
+    # print((Sc==Sc2)[:, :-1].all())
+    econ = (Sc2 * pref_src)[:, :-1]    # no source term for the boundary condition
     econ[:, 0] = 0
 
     dexcsrc = np.zeros((ncond, atmosphere.N-1))
@@ -358,6 +359,41 @@ def cal_t_coag_inv(ap, n_p, cache, vsed=None):
 
     return -2*np.pi * n_p * ap**2 * deltv + 2*np.pi * np.minimum(vBM*ap, Dp) * ap * n_p
 
+def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
+    ''' To calculate the condensation rate for all of the reaction. A more pythonic way to calculate it. '''
+    # chemistry data
+    gasst = chem.gasst
+    mugas = np.atleast_2d(chem.mugas).T
+    mucond = np.atleast_2d(chem.musolid[chem.solidindex]).T
+
+    # xv-independent data
+    rhoarr = cache.rho_grid
+    v_tharr = cache.v_th_grid
+    Di = cache.diffusivity_grid
+    Sbase = cache.Sbase_grid
+    N = len(xv[0])                # number of grids
+    nvapor = len(xv)              # number of vapor
+    nrec = len(chem.reactions)    # number of reactions
+
+    # xv-dependent quantity
+    xv3d = np.atleast_3d(xv).repeat(nrec, axis=-1)         # These 3D tensors are (nvapor, N, nreactions)-shaped
+    gasst3d = np.moveaxis(np.atleast_3d(gasst).repeat(N, axis=-1), 0, -1)
+    S = Sbase * np.prod(xv3d**gasst3d, axis=0).T    # TBD: Maybe calculating log is easier because can call numpy matrix multiply
+    rv = np.minimum(4*Di/(aparr*v_tharr), np.sqrt(pars.mgas/(mugas*cnt.mu)))    # vapor molecules impinging velocity, (nvapor, N)
+
+    # determine the key species and calculate its property
+    argkey = np.argmin(xv3d*np.atleast_3d(rv)/(np.atleast_3d(mugas)*gasst3d), axis=0).T    # key species for each reaction, each location
+    nu = np.choose(argkey.T, gasst.T).T
+    mu = np.choose(argkey, chem.mugas)
+    xvkey = np.choose(argkey, xv)
+    rvkey = np.choose(argkey, rv)
+
+    bsrec = np.array([bs[reaction.solidindex] for reaction in chem.reactions])
+    # calculate the source term for each reaction
+    Sc_term = pars.f_stick * xvkey*rhoarr/nu * (1 - bs/S) * np.pi* n_parr * aparr**2 * v_tharr * rvkey * mucond/mu
+
+    return Sc_term
+
 def cal_Sc(xv, aparr, n_parr, bs, gasst, solidindex, i, cache, mugas, mucond):
     ''' To calculate the condensation rate for each reaction. '''
     gasst = np.atleast_2d(gasst).T
@@ -369,13 +405,14 @@ def cal_Sc(xv, aparr, n_parr, bs, gasst, solidindex, i, cache, mugas, mucond):
 
     S = Sbase * np.prod(xv**gasst, axis=0)    # should be careful: when two species becomes negative, S would be positive
     rv = np.minimum(4*Di/(aparr*v_tharr), np.sqrt(pars.mgas/(mugas*cnt.mu)))
-    relidx = np.where(gasst[:, 0]!=0)[0]    # gas species relevant to this reaction
-    argkey = np.argmin((xv/mugas/gasst*rv)[relidx], axis=0)    # find the critical species
-    argkey = relidx[argkey]
+    # relidx = np.where(gasst[:, 0]!=0)[0]    # gas species relevant to this reaction
+    # argkey = np.argmin((xv/mugas/gasst*rv)[relidx], axis=0)    # find the critical species
+    # argkey = relidx[argkey]
+    argkey = np.argmin((xv/mugas/gasst*rv), axis=0)
 
     # if xv<0, make Sc=0
-    negxvidx = np.any(xv[relidx]<=0, axis=0)
-    negapidx = np.where(aparr<=0)[0]
+    # negxvidx = np.any(xv[relidx]<=0, axis=0)
+    # negapidx = np.where(aparr<=0)[0]
 
     nu = np.choose(argkey, gasst)    # nu = gasst[argkey]?
     mu = np.choose(argkey, mugas)
@@ -383,8 +420,8 @@ def cal_Sc(xv, aparr, n_parr, bs, gasst, solidindex, i, cache, mugas, mucond):
     rvkey = np.choose(argkey, rv)
 
     Sc_term = pars.f_stick * xvkey*rhoarr/nu * (1 - bs/S) * np.pi* n_parr * aparr**2 * v_tharr * rvkey * mucond[solidindex]/mu
-    Sc_term[negxvidx] = 0    # if xv<0, make Sc=0
-    Sc_term[negapidx] = 0    # if ap<0, make Sc=0
+    # Sc_term[negxvidx] = 0    # if xv<0, make Sc=0
+    # Sc_term[negapidx] = 0    # if ap<0, make Sc=0
     return Sc_term
 
 def cal_Sbase(P, T, chem):

@@ -46,12 +46,15 @@ class atmosphere():
         self.v_sed = funs.cal_vsed(self.ap, self.cachegrid)
         self.t_coag_inv = funs.cal_t_coag_inv(self.ap, self.np, self.cachegrid, self.v_sed)
 
-        Sc = np.zeros((len(self.chem.reactions), self.N))
-        mugas = np.atleast_2d(self.chem.mugas).T
-        for i, reaction in enumerate(self.chem.reactions):
-            solidindex = reaction.solidindex
-            gasst = reaction.gasst
-            Sc[i] = funs.cal_Sc(self.xv, self.ap, self.np, self.bs[solidindex], gasst, solidindex, i, self.cachegrid, mugas, self.chem.musolid)
-        self.Sc = Sc
+        # Sc = np.zeros((len(self.chem.reactions), self.N))
+        # mugas = np.atleast_2d(self.chem.mugas).T
+        # for i, reaction in enumerate(self.chem.reactions):
+        #     solidindex = reaction.solidindex
+        #     gasst = reaction.gasst
+        #     Sc[i] = funs.cal_Sc(self.xv, self.ap, self.np, self.bs[solidindex], gasst, solidindex, i, self.cachegrid, mugas, self.chem.musolid)
+        # self.Sc = Sc
+        Sc2 = funs.cal_Sc_all(self.xv, self.ap, self.np, self.bs, self.chem, self.cachegrid)
+        self.Sc = Sc2
+        # print((Sc==Sc2)[:, :-1].all())
         
         return
