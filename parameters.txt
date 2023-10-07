@@ -50,7 +50,8 @@ verbose = 'verbose'
 # -- 'popup'    :draw to inspect
 # -- 'none'     :do nothing 
 
-savemode = 'save'
+plotmode = 'save'
+writeoutputfile = True
 
 ##suppress warnings?
 #

@@ -70,7 +70,7 @@ def myplot_v2(Parr, y0, ncod, ngas, save=0):
 
     return
 
-def myplot(Parr, y0, ncod, ngas, savemode=0, **kwargs):
+def myplot(Parr, y0, ncod, ngas, plotmode=0, **kwargs):
     '''plot the solid and gas concentrations'''
     s = funs.cal_ap(y0[:ncod], y0[-1])
 
@@ -116,9 +116,9 @@ def myplot(Parr, y0, ncod, ngas, savemode=0, **kwargs):
 
     plt.subplots_adjust(left=0.1, right=0.77, bottom=0.1, top=0.9, hspace=0, wspace=0)
 
-    if savemode=='all' or savemode=='save':
+    if plotmode=='all' or plotmode=='save':
         plt.savefig('result.png', dpi=288)
-    if savemode=='all' or savemode=='popup':
+    if plotmode=='all' or plotmode=='popup':
         plt.show()
 
     plt.clf()

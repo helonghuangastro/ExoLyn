@@ -15,6 +15,7 @@ import pdb
 import atmosphere_class
 import read
 import sys
+import output
 
 class control():
     '''
@@ -289,7 +290,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
                 ctrl.update(ynew=yn)
             # plot if verbose='verbose'
             if pars.verboselevel >= 1:
-                myplot(Parr, atmospheren.y, ncond, ngas, savemode=pars.savemode)
+                myplot(Parr, atmospheren.y, ncond, ngas, plotmode=pars.plotmode)
             if ctrl.status==0:
                 atmosphere.update(yn)
                 ctrl.clear()
@@ -310,7 +311,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
 
         print('[relaxation]SUCCESS: converged on >> ' + fpara_name +' <<')
         if pars.verboselevel==0:
-            myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
+            myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
 
 if __name__ == '__main__':
 
@@ -340,12 +341,14 @@ if __name__ == '__main__':
     atmosphere.update(y0)
     # plot the initial state
     if pars.verboselevel >= 0:
-        myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
+        myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
 
     ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
 
     iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
-    print('[main]it is now time to generate an output table (!!)')
 
     if pars.verboselevel == -1:
-        myplot(Parr, atmosphere.y, ncond, ngas, savemode=pars.savemode)
+        myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
+
+    if pars.writeoutputfile:
+        output.writeatm(atmosphere.y, atmosphere.grid)

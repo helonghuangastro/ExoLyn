@@ -2,7 +2,7 @@ import numpy as np
 import pdb
 import parameters as pars
 
-def writeatm(y, grid, filename, additional=''):
+def writeatm(y, grid, filename='grid.txt', additional=''):
     with open(filename, 'w') as opt:
         # write additional
         opt.write(additional)
