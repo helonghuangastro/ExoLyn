@@ -61,7 +61,9 @@ def writepars():
         opt.write('\n')
 
         opt.write('verbose = \'silent\'\n')
-        opt.write('savemode = \'none\'\n')
+        opt.write('plotmode = \'none\'\n')
+        opt.write('writeoutputfile = False\n')
+        opt.write('suppresswarnings = \'all\'')
         opt.write('\n')
 
         opt.write('============ put reactions here =============\n')

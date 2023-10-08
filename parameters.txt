@@ -41,7 +41,7 @@ autoboundary = True     #please describe what does this does
 # -- 'default'= plot once finished converging fpara; 
 # -- 'verbose'= plot for every fpara value
 
-verbose = 'verbose'     
+verbose = 'silent'     
 
 
 ##choose w/r to show and/or save intermediate files.
@@ -50,8 +50,8 @@ verbose = 'verbose'
 # -- 'popup'    :draw to inspect
 # -- 'none'     :do nothing 
 
-plotmode = 'save'
-writeoutputfile = True
+plotmode = 'none'
+writeoutputfile = False
 
 ##suppress warnings?
 #
