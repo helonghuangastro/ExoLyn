@@ -8,7 +8,7 @@ Kzz = 1e8       # diffusion, cm^2s^-1
 Kp = 1e8        # particle diffusivity, cm^2s^-1
 cs_mol = 2e-15  # molecular cross section, cm^2
 
-f_stick = 1.    # what does this parameter do?
+f_stick = 1.    # sticking probability
 cs_com = 8e-15  # combined cross section for vapor and H2, cm^2
 rho_int = 2.8   # particle internal density, g cm^-3
 an = 1e-7       # nucleation radius, cm
