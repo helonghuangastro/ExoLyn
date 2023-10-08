@@ -372,7 +372,7 @@ def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
     Di = cache.diffusivity_grid
     Sbase = cache.Sbase_grid
     N = len(xv[0])                # number of grids
-    nvapor = len(xv)              # number of vapor
+    # nvapor = len(xv)              # number of vapor
     nrec = len(chem.reactions)    # number of reactions
 
     # xv-dependent quantity
@@ -381,16 +381,23 @@ def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
     S = Sbase * np.prod(xv3d**gasst3d, axis=0).T    # TBD: Maybe calculating log is easier because can call numpy matrix multiply
     rv = np.minimum(4*Di/(aparr*v_tharr), np.sqrt(pars.mgas/(mugas*cnt.mu)))    # vapor molecules impinging velocity, (nvapor, N)
 
-    # determine the key species and calculate its property
-    argkey = np.argmin(xv3d*np.atleast_3d(rv)/(np.atleast_3d(mugas)*gasst3d), axis=0).T    # key species for each reaction, each location
-    nu = np.choose(argkey.T, gasst.T).T
-    mu = np.choose(argkey, chem.mugas)
-    xvkey = np.choose(argkey, xv)
-    rvkey = np.choose(argkey, rv)
+    # how much solid will be formed assuming inpinging from each vapor
+    inpingmol = xv3d * np.atleast_3d(rv) / (np.atleast_3d(mugas) * gasst3d)
+    inpingkey = np.min(inpingmol, axis=0).T                # key molecule that limit the inpinging rate
 
     bsrec = np.array([bs[reaction.solidindex] for reaction in chem.reactions])
+    Sc_term = pars.f_stick * rhoarr * (1 - bsrec/S) * np.pi* n_parr * aparr**2 * v_tharr * mucond * inpingkey
+
+    # My old way to do the calculation, using a lot of 'choose'
+    # determine the key species and calculate its property
+    # argkey = np.argmin(xv3d*np.atleast_3d(rv)/(np.atleast_3d(mugas)*gasst3d), axis=0).T    # key species for each reaction, each location
+    # nu = np.choose(argkey.T, gasst.T).T
+    # mu = np.choose(argkey, chem.mugas)
+    # xvkey = np.choose(argkey, xv)
+    # rvkey = np.choose(argkey, rv)
+
     # calculate the source term for each reaction
-    Sc_term = pars.f_stick * xvkey*rhoarr/nu * (1 - bs/S) * np.pi* n_parr * aparr**2 * v_tharr * rvkey * mucond/mu
+    # Sc_term = pars.f_stick * xvkey*rhoarr/nu * (1 - bsrec/S) * np.pi* n_parr * aparr**2 * v_tharr * rvkey * mucond/m
 
     return Sc_term
 
