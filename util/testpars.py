@@ -100,7 +100,7 @@ T_star_range = [3000, 8000]
 failcount = 0
 totaltime = 0
 succtime = 0
-N = 100
+N = 1000
 for i in range(N):
     print(i)
 

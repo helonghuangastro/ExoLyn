@@ -399,7 +399,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
         if SR[:, i].sum() < Sfail:
             try:
                 flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i], lnSn[i])
-            except TypeError:    # Sometimes the newton method returns error because the matrix is nearly singular.
+            except (TypeError, np.linalg.LinAlgError):    # Sometimes the newton method returns error because the matrix is nearly singular.
                 flagsingle = -1
         else:
             flagsingle = -1
