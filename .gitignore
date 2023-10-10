@@ -4,3 +4,4 @@ old/
 test/
 util/parameters.txt
 *.so
+*.swp

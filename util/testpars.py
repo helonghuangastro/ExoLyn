@@ -2,6 +2,7 @@ import os
 import time
 import numpy as np
 import shutil
+import subprocess as sp
 # import signal
 def writepars():
     with open('parameters.txt', 'w') as opt:
@@ -100,7 +101,7 @@ T_star_range = [3000, 8000]
 failcount = 0
 totaltime = 0
 succtime = 0
-N = 1000
+N = 10
 for i in range(N):
     print(i)
 
@@ -111,7 +112,10 @@ for i in range(N):
     # signal.alarm(120)
 
     starttime = time.time()
-    isfail = os.system("python3 ../relaxation.py ./parameters.txt")
+    #isfail = os.system("python3 ../relaxation.py ./parameters.txt")
+    out = sp.run(['python3', '../relaxation.py', './parameters.txt'])
+    isfail = out.returncode
+
     endtime = time.time()
     totaltime += endtime - starttime
     if isfail == 0:
