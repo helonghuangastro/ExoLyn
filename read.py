@@ -106,6 +106,9 @@ class reaction():
         for i, gas in enumerate(pars.gas):
             if gas in self.reactant.keys():
                 self.gasst[i] = self.reactant[gas]
+            # support the cases where vapor is in the product
+            elif gas in self.product.keys() and gas!=self.solid:
+                self.gasst[i] = -self.product[gas]
         return
 
     def cal_dG(self, moldata, molecules):
