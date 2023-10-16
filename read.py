@@ -76,6 +76,13 @@ class chemdata():
                         reactant[moleterm] = st
                     else:
                         product[moleterm] = st
+                
+                # if the stoichiometric number of solid is not 1
+                stsolid = product[solid+'(s)']
+                for name in reactant.keys():
+                    reactant[name] /= stsolid
+                for name in product.keys():
+                    product[name] /= stsolid
 
                 readreaction = reaction(reactant, product, solid)
                 reactions.append(readreaction)
