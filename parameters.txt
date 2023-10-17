@@ -33,7 +33,7 @@ Pa = 1.         # pressure at the upper limit of atmosphere, in cgs units
 Pb = 1e7        # pressure at the lower limit of atmosphere, in cgs units
 Pref = 1e6      # reference pressure at which the gibbs energy is measured
 
-autoboundary = True     #please describe what does this does
+autoboundary = True     # whether or not adjust the lower boundary automatically
 
 ## choose one of [silent,quiet,default,verbose] 
 # -- 'silent'= no pop-up figure; 
