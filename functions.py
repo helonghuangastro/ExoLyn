@@ -340,7 +340,7 @@ def cal_vsed(ap, cache):
     '''sedimentation velocity'''
     v_tharr = cache.v_th_grid
     rhoarr = cache.rho_grid
-    return -pars.g * ap * pars.rho_int / (v_tharr * rhoarr)
+    return -pars.g * ap * pars.rho_int / (v_tharr * rhoarr) * np.maximum(1, 4*ap/(9*cache.lmfp_grid))    # the last term accounts for Stokes regime
 
 def cal_t_coag_inv(ap, n_p, cache, vsed=None):
     '''coagulation time scale, Eq. (12) in OrmelMin2019'''
