@@ -315,6 +315,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
 
 if __name__ == '__main__':
 
+    init.set_rundir(sys.argv)
     init.check_input_errors ()
 
     #suppress warnings
@@ -323,7 +324,7 @@ if __name__ == '__main__':
         warnings.filterwarnings('ignore')
 
     # read in all the chemistry data
-    chem = read.chemdata(pars.gibbsfile)
+    chem = read.chemdata(pars.rdir+pars.gibbsfile)
 
     # find the boundary of the domain
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)

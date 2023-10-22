@@ -11,10 +11,22 @@ from scipy.optimize import root
 import pdb
 import sys
 
+def set_rundir(argv):
+    """
+    the first argument will point to 'relaxation.py'
+    """
+    i1 = argv[0].rfind('/')
+    pars.rdir = argv[0][:i1+1]
+
+
 def check_input_errors ():
 
     if pars.xvb.shape[0]!=len(pars.gas):
         print('[init]ERROR:dimensions of >>xvb<< and >>gas<< in parameters.txt are inconsistent!')
+        sys.exit()
+
+    if pars.verbose not in ['silent','quiet','default','verbose']:
+        print('[init]ERROR:invalid pars.verbose parameter!')
         sys.exit()
 
 
