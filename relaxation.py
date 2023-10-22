@@ -90,7 +90,7 @@ class control():
         elif self.mode == 'y':
             ynew = kwargs['ynew']
             if np.isnan(ynew).any():
-                print(f'NaN encountered.')
+                print(f'[relaxation]:NaN encountered.')
                 self.status = -1
             elif self.count<self.dummy['wait']:
                 self.status = 100
@@ -101,7 +101,7 @@ class control():
                 if (absflag | relflag).all():
                     self.status = 0
                 elif self.count>self.dummy['maxitr']:
-                    print('exceed maximum iteration')
+                    print('[relaxation]:exceed maximum iteration')
                     # pdb.set_trace()
                     self.status = -2
                 else:
@@ -195,11 +195,11 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
     maxdecrease = maxincrease / 2
     # maxincrease = np.minimum(maxincrease, 99*y0[:nvar, :-1])    # This line seems to be useless
     maxdecrease = np.minimum(maxdecrease, 0.99*y0[:nvar, :-1])
-    dy = np.minimum(matsol, maxincrease)
+    dy = np.minimum(matsol,  maxincrease)
     dy = np.maximum(matsol, -maxdecrease)
 
     i = 0
-    while(True):
+    while True:
         ynew = y0.copy()
         ynew[:nvar, :-1] += dy/2**i * alpha    # alpha is a parameter to limit the step. When the iteration becomes stuck, be more careful on the iteration.
         ynew[:nvar, -1] = bcb()[:nvar]
@@ -211,9 +211,11 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
             break
         if i>=5:
             print(f'[relaxation]WARNING: In the non-linear regime, reduce the step by {2**i}')
+            #shouldn't this say:
+            print(f'[relaxation]WARNING: In the non-linear regime, no improvement after step reduction by factor {2**i}')
             break
         i += 1
-
+    
     return ynew
 
 def postprocess(yn, ncond, ngas):
@@ -243,6 +245,10 @@ def postprocess(yn, ncond, ngas):
     return yn
 
 def relaxation(efun, dedy, bcb, atmosphere, alpha=1, fixxn=False, **kwargs):    
+    """
+    chris: could we perhaps tell a bit more on what we are doing in this
+    function?
+    """
     # calculate E, B matrix
     Emat = efun(atmosphere, **kwargs)
     if fixxn:
@@ -283,11 +289,14 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
             fpara = ffail[-1]
             alpha = 1 - 0.1*(-np.log10((fpara-fsucc)/fpara))    # alpha is a parameter to limit the step. When the iteration becomes stuck, i.e. fpara becomes close to fsucc, be more careful on the iteration.
             kwargs[fpara_name] = fpara
-            print('[relaxation]Converging on ' + fpara_name + ' at ' + str(fpara))
+            print('[relaxation.iterate]:converging on ' + fpara_name + ' at ' + str(fpara))
             atmospheren.update(atmosphere.y.copy())
+            niter = 0 
             while(ctrl.status==100):
                 yn = relaxation(funs.E, funs.dEdy, funs.bcb, atmospheren, alpha, **kwargs)
                 ctrl.update(ynew=yn)
+                niter += 1
+            print('[relaxation.iterate]:conducted ', niter, ' iterations; exit status = ', ctrl.status)
             # plot if verbose='verbose'
             if pars.verboselevel >= 1:
                 myplot(Parr, atmospheren.y, ncond, ngas, plotmode=pars.plotmode)
