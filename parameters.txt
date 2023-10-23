@@ -51,7 +51,7 @@ verbose = 'silent'
 # -- 'none'     :do nothing 
 
 plotmode = 'none'
-writeoutputfile = False
+writeoutputfile = True
 
 ##suppress warnings?
 #
