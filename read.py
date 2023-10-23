@@ -9,14 +9,7 @@ class chemdata():
         self.mollist = []    # name of all molecules
         self.molecules = {}    # store all the molecular data
         self.reactions = self.get_reaction(pars.parafilename)
-        ## BUG?? 
-        ##I get an error here when gas is in pars.gas but not in self.molecules:
-        ##
-        ##      self.mugas = np.array([self.molecules[gas].mu for gas in pars.gas])
-        ## KeyError: 'TiO'
-        ##
-        ##I don't see why we should get this error. If a molecule is non-reactant, let it be...
-        ##
+        self.addgasmolecule(pars.gas)
         self.mugas = np.array([self.molecules[gas].mu for gas in pars.gas])
         for reaction in self.reactions:
             reaction.cal_dG(self.gibbsdata, self.molecules)
@@ -96,6 +89,14 @@ class chemdata():
                 i += 1
 
             return reactions
+
+    def addgasmolecule(self, gasmollist):
+        ''' Add gas molecules that's not in the reaction, but in the parameter file '''
+        for gasname in gasmollist:
+            if gasname not in self.molecules:
+                mole = molecule(gasname)
+                self.molecules[gasname] = mole
+        return
 
 class reaction():
     def __init__(self, reactant, product, solid):
