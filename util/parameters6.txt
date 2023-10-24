@@ -1,0 +1,52 @@
+opa_IR = 0.3
+g = 2683.1296878654985
+firr = 1 / 4
+opa_vis_IR = 0.158
+T_int = 546.1463722933339
+mgas = 2.34 * cnt.mu
+Kzz = 1272749576.6659448
+Kp = 1272749576.6659448
+cs_mol = 2e-15
+
+f_stick = 1.
+cs_com = 8e-15
+rho_int = 2.8
+an = 1e-7
+mn0 = 4 / 3 * np.pi * rho_int * an ** 3
+nuc_pro = 1.3042548156152613e-12
+sigma_nuc = 0.1365226482393424
+P_star = 156.08130116225593
+
+gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
+xvb = [0.0004221354735429634, 0.004527905434637401, 0.006677697823264714, 0.0010817505335877983, 8.773950459230383e-05, 4.1294353158549376e-06, 8.033236180588454e-05]
+reactionfile = './reactions.txt'
+gibbsfile = './gibbs.txt'
+
+T_star = 3159.9150770093975
+R_star = cnt.R_sun
+
+Rp = 1.087 * cnt.Rj
+rp = 0.05 * cnt.au
+
+N = 700
+Pa = 1.
+Pb = 1e7
+Pref = 1e6
+autoboundary = True
+
+verbose = 'verbose'
+plotmode = 'popup'
+writeoutputfile = False
+suppresswarnings = 'all'
+============ put reactions here =============
+Mg + SiO + 2H2O -> MgSiO3(s) + 2H2
+2Mg + SiO + 3H2O -> Mg2SiO4(s) + 3H2
+SiO + H2O -> SiO2(s) + H2
+Mg + H2O -> MgO(s) + H2
+Fe + H2O -> FeO(s) + H2
+Fe + H2S -> FeS(s) + H2
+2Fe + 3H2O -> Fe2O3(s) + 3H2
+Fe -> Fe(s)
+TiO + H2O -> TiO2(s) + H2
+2Al + 3H2O -> Al2O3(s) + 3H2
+
