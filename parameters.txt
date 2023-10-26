@@ -41,7 +41,7 @@ autoboundary = True     # whether or not adjust the lower boundary automatically
 # -- 'default'= plot once finished converging fpara; 
 # -- 'verbose'= plot for every fpara value
 
-verbose = 'silent'     
+verbose = 'quiet'     
 
 
 ##choose w/r to show and/or save intermediate files.
@@ -50,8 +50,8 @@ verbose = 'silent'
 # -- 'popup'    :draw to inspect
 # -- 'none'     :do nothing 
 
-plotmode = 'none'
-writeoutputfile = True
+plotmode = 'popup'
+writeoutputfile = False
 
 ##suppress warnings?
 #
