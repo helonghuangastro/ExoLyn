@@ -172,15 +172,27 @@ def dEdy(atmosphere, **kwargs):
     econ = (atmosphere.Sc * pref_src)[:, :-1]    # no source term for the boundary condition
     econ[:, 0] = 0
     deltv = -0.5 * atmosphere.v_sed * fsed    # collision velocity due to sedimentation
-    t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.np, atmosphere.cachegrid, deltv)
-    exnsrc = get_exnsrc(pref_src, atmosphere.xn, atmosphere.cachegrid, t_coag_inv)
+    t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.np, cache_grid, deltv)
+    exnsrc = get_exnsrc(pref_src, atmosphere.xn, cache_grid, t_coag_inv)
     exnsrc = np.insert(exnsrc, 0, 0)
 
+    desrcdy = np.zeros((nvar, nvar, N-1))
     for i in range(nvar):
         ynew = y0.copy()
         ynew[i] += dy[i]
         desrc = dEdysrc(atmosphere, ynew, pref_src, econ, exnsrc, **kwargs)
-        J[:, :, i+nvar] += (desrc / dy[i, :-1]).T
+        desrcdy[i] = desrc/dy[i, :-1]
+
+    # Analytically calculate dexnsrc/dxn
+    deltvnew = -0.5 * cal_vsed(atmosphere.ap*1.001, cache_grid) * fsed
+    t_coag_invnew = cal_t_coag_inv(atmosphere.ap*1.001, atmosphere.np, cache_grid, deltvnew)
+    dt_coag_invdap = (t_coag_invnew-t_coag_inv)/(1e-3*atmosphere.ap)
+    dexnsrcdxn = 2*t_coag_inv - 1/3*dt_coag_invdap * atmosphere.ap * (1-(pars.an/atmosphere.ap)**3)
+    dexnsrcdxn *= -pref_src * cache_grid.rho_grid
+    dexnsrcdxn[0] = 0
+    desrcdy[-1, -1] = dexnsrcdxn[:-1]
+
+    J[:, :, nvar:(2*nvar)] += np.swapaxes(desrcdy, 0, 2)
 
     return J
 
@@ -339,7 +351,7 @@ def cal_vsed(ap, cache):
     '''sedimentation velocity'''
     v_tharr = cache.v_th_grid
     rhoarr = cache.rho_grid
-    return -pars.g * ap * pars.rho_int / (v_tharr * rhoarr) * np.maximum(1, 4*ap/(9*cache.lmfp_grid))    # the last term accounts for Stokes regime
+    return -pars.g * ap * pars.rho_int / (v_tharr * rhoarr) * np.sqrt(1 + (4*ap/(9*cache.lmfp_grid))**2)    # the last term accounts for Stokes regime, smoothed the transition
 
 def cal_t_coag_inv(ap, n_p, cache, deltv=0):
     '''coagulation time scale, Eq. (12) in OrmelMin2019'''
