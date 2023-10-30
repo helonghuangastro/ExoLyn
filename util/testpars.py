@@ -41,8 +41,7 @@ def writepars():
             xvb.append(xvb0[i]*10**(2*rnarr[i]-1))
         opt.write('xvb = ' + str(xvb))
         opt.write('\n')
-        opt.write('reactionfile = \'../reactions.txt\'\n')
-        opt.write('gibbsfile = \'../gibbs.txt\'\n')
+        opt.write('gibbsfile = \'./gibbs.txt\'\n')
         opt.write('\n')
 
         rn = np.random.rand()
@@ -101,7 +100,7 @@ T_star_range = [3000, 8000]
 failcount = 0
 totaltime = 0
 succtime = 0
-N = 10
+N = 500
 for i in range(N):
     print(i)
 
@@ -139,3 +138,5 @@ for i in range(N):
 print('Failed cases: ' + str(failcount))
 print('Total time: ' + str(totaltime) + ' s')
 print('Average successful time: ' + str(succtime/(N-failcount)) + ' s')
+
+os.remove('parameters.txt')

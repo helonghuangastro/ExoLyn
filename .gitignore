@@ -2,6 +2,7 @@ __pycache__/
 figure/
 old/
 test/
-util/parameters.txt
+util/failpars/
+*.png
 *.so
 *.swp
