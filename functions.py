@@ -357,6 +357,7 @@ def cal_t_coag_inv(ap, n_p, cache, vsed=None):
     eta = 0.5 * lmfparr * v_tharr * rhoarr    # dynamic viscosity at p.5 of OrmelMin2019
     Dp = cnt.kb * Tarr / (6*np.pi * eta * ap)
 
+    #following OM19
     return -2*np.pi * n_p * ap**2 * deltv + 2*np.pi * np.minimum(vBM*ap, Dp) * ap * n_p
 
 def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
