@@ -90,9 +90,11 @@ def E(atmosphere, **kwargs):
     exvdif = edif(pref_dif, atmosphere.xv, dx) * fdif
 
     # error for xn
+    deltv = -0.5 * atmosphere.v_sed * fsed    # collision velocity due to sedimentation
+    t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.np, atmosphere.cachegrid, deltv)
     exndif = edif(pref_dif, atmosphere.xn, dx) * fdif
     exnadv = eadv(pref_adv, atmosphere.xn, dx)
-    exnsrc = get_exnsrc(pref_src, atmosphere.xn, atmosphere.cachegrid, atmosphere.t_coag_inv)
+    exnsrc = get_exnsrc(pref_src, atmosphere.xn, atmosphere.cachegrid, t_coag_inv)
     exnsrc = np.insert(exnsrc, 0, 0)
 
     # error for source terms
@@ -169,14 +171,28 @@ def dEdy(atmosphere, **kwargs):
     pref_src = cnt.kb * Tarr / (pars.mgas * pars.g)
     econ = (atmosphere.Sc * pref_src)[:, :-1]    # no source term for the boundary condition
     econ[:, 0] = 0
-    exnsrc = get_exnsrc(pref_src, atmosphere.xn, atmosphere.cachegrid, atmosphere.t_coag_inv)
+    deltv = -0.5 * atmosphere.v_sed * fsed    # collision velocity due to sedimentation
+    t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.np, cache_grid, deltv)
+    exnsrc = get_exnsrc(pref_src, atmosphere.xn, cache_grid, t_coag_inv)
     exnsrc = np.insert(exnsrc, 0, 0)
 
+    desrcdy = np.zeros((nvar, nvar, N-1))
     for i in range(nvar):
         ynew = y0.copy()
         ynew[i] += dy[i]
         desrc = dEdysrc(atmosphere, ynew, pref_src, econ, exnsrc, **kwargs)
-        J[:, :, i+nvar] += (desrc / dy[i, :-1]).T
+        desrcdy[i] = desrc/dy[i, :-1]
+
+    # Analytically calculate dexnsrc/dxn
+    deltvnew = -0.5 * cal_vsed(atmosphere.ap*1.001, cache_grid) * fsed
+    t_coag_invnew = cal_t_coag_inv(atmosphere.ap*1.001, atmosphere.np, cache_grid, deltvnew)
+    dt_coag_invdap = (t_coag_invnew-t_coag_inv)/(1e-3*atmosphere.ap)
+    dexnsrcdxn = 2*t_coag_inv - 1/3*dt_coag_invdap * atmosphere.ap * (1-(pars.an/atmosphere.ap)**3)
+    dexnsrcdxn *= -pref_src * cache_grid.rho_grid
+    dexnsrcdxn[0] = 0
+    desrcdy[-1, -1] = dexnsrcdxn[:-1]
+
+    J[:, :, nvar:(2*nvar)] += np.swapaxes(desrcdy, 0, 2)
 
     return J
 
@@ -215,20 +231,15 @@ def dEdysrc(atmosphere, y1, pref_src, econ0, exnsrc0, **kwargs):
     n_parr = cal_np(xn, cache_grid)    # could be <0
     bs = xcpos / (xcpos.sum(axis=0) + xn)
     v_sedarr = cal_vsed(aparr, cache_grid)
-    t_coag_invarr = cal_t_coag_inv(aparr, n_parr, cache_grid, v_sedarr)
+    deltvarr = -0.5 * v_sedarr * kwargs['fsed']    # collision velocity due to sedimentation
+    t_coag_invarr = cal_t_coag_inv(aparr, n_parr, cache_grid, deltvarr)
     exnsrc = get_exnsrc(pref_src, xn, cache_grid, t_coag_invarr)
     exnsrc = np.insert(exnsrc, 0, 0)
 
     # calculate new econ
-    # Sc = np.zeros((len(reactions), atmosphere.N))
     mugas = np.atleast_2d(atmosphere.chem.mugas).T
     mucond = atmosphere.chem.musolid
-    # for i, reaction in enumerate(reactions):
-    #     solidindex = reaction.solidindex
-    #     gasst = reaction.gasst
-    #     Sc[i] = cal_Sc(xv, aparr, n_parr, bs[solidindex], gasst, solidindex, i, cache_grid, mugas, mucond)
     Sc2 = cal_Sc_all(xv, aparr, n_parr, bs, atmosphere.chem, cache_grid)
-    # print((Sc==Sc2)[:, :-1].all())
     econ = (Sc2 * pref_src)[:, :-1]    # no source term for the boundary condition
     econ[:, 0] = 0
 
@@ -340,9 +351,9 @@ def cal_vsed(ap, cache):
     '''sedimentation velocity'''
     v_tharr = cache.v_th_grid
     rhoarr = cache.rho_grid
-    return -pars.g * ap * pars.rho_int / (v_tharr * rhoarr) * np.maximum(1, 4*ap/(9*cache.lmfp_grid))    # the last term accounts for Stokes regime
+    return -pars.g * ap * pars.rho_int / (v_tharr * rhoarr) * np.sqrt(1 + (4*ap/(9*cache.lmfp_grid))**2)    # the last term accounts for Stokes regime, smoothed the transition
 
-def cal_t_coag_inv(ap, n_p, cache, vsed=None):
+def cal_t_coag_inv(ap, n_p, cache, deltv=0):
     '''coagulation time scale, Eq. (12) in OrmelMin2019'''
     Tarr = cache.T_grid
     lmfparr = cache.lmfp_grid
@@ -350,9 +361,6 @@ def cal_t_coag_inv(ap, n_p, cache, vsed=None):
     rhoarr = cache.rho_grid
 
     mp = 4*np.pi/3 * pars.rho_int * ap**3
-    if type(vsed) is not np.ndarray and vsed==None:
-        vsed = cal_vsed(ap, cache)
-    deltv = 0.5 * vsed
     vBM = np.sqrt(16*cnt.kb*Tarr/(np.pi*mp))
     eta = 0.5 * lmfparr * v_tharr * rhoarr    # dynamic viscosity at p.5 of OrmelMin2019
     Dp = cnt.kb * Tarr / (6*np.pi * eta * ap)
@@ -388,17 +396,6 @@ def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
 
     bsrec = np.array([bs[reaction.solidindex] for reaction in chem.reactions])
     Sc_term = pars.f_stick * rhoarr * (1 - bsrec/S) * np.pi* n_parr * aparr**2 * v_tharr * mucond * inpingkey
-
-    # My old way to do the calculation, using a lot of 'choose'
-    # determine the key species and calculate its property
-    # argkey = np.argmin(xv3d*np.atleast_3d(rv)/(np.atleast_3d(mugas)*gasst3d), axis=0).T    # key species for each reaction, each location
-    # nu = np.choose(argkey.T, gasst.T).T
-    # mu = np.choose(argkey, chem.mugas)
-    # xvkey = np.choose(argkey, xv)
-    # rvkey = np.choose(argkey, rv)
-
-    # calculate the source term for each reaction
-    # Sc_term = pars.f_stick * xvkey*rhoarr/nu * (1 - bsrec/S) * np.pi* n_parr * aparr**2 * v_tharr * rvkey * mucond/m
 
     return Sc_term
 

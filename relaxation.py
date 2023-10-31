@@ -203,16 +203,34 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
         ynew = y0.copy()
         ynew[:nvar, :-1] += dy/2**i * alpha    # alpha is a parameter to limit the step. When the iteration becomes stuck, be more careful on the iteration.
         ynew[:nvar, -1] = bcb()[:nvar]
-        ynew[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-18)    # It seems that this line is necessary. I forget why it is.
+        ynew[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-50)    # This line is necessary to limit the nuclei concentration, so that the particles will not be too large
         atmosphere.update(ynew)
         Emat = funs.E(atmosphere, **kwargs)
         Enew = np.mean(np.abs(Emat))
         if Enew<Eold*1.2:
             break
         if i>=5:
-            print(f'[relaxation]WARNING: In the non-linear regime, reduce the step by {2**i}')
-            #shouldn't this say:
             print(f'[relaxation]WARNING: In the non-linear regime, no improvement after step reduction by factor {2**i}')
+            
+            if False:
+                # this is a trial that try to find solution from the opposite direction ......
+                for j in range(6):
+                    # pdb.set_trace()
+                    ytry = y0.copy()
+                    ytry[:nvar, :-1] -= dy/2**j * alpha
+                    ytry[:nvar, -1] = bcb()[:nvar]
+                    ytry[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-50)
+                    atmosphere.update(ytry)
+                    Emat = funs.E(atmosphere, **kwargs)
+                    Enew = np.mean(np.abs(Emat))
+                    # if we can find a better solution from the opposite direction ......
+                    if Enew<=Eold:
+                        # pdb.set_trace()
+                        print('find a better solution when ascending gradient direction...')
+                        break
+                if Enew>Eold:
+                    atmosphere.update(ynew)
+
             break
         i += 1
     
