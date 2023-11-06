@@ -7,8 +7,13 @@ def writeatm(y, grid, filename='grid.txt', additional='', fmt1='{:12.4e}'):
     chris: what is the meaning of "additional"?
     """
 
+    if 'savedir' not in pars.__dict__:
+        savedir = './'
+    else:
+        savedir = pars.savedir
+
     print("[output]:writing output to filen: "+filename)
-    with open(filename, 'w') as opt:
+    with open(savedir + filename, 'w') as opt:
         # write additional
         opt.write(additional)
 

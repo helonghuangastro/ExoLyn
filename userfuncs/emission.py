@@ -51,7 +51,11 @@ for i in range(len(extragas)):
 ncod = len(pars.solid)
 ngas = len(pars.gas)
 
-data = np.genfromtxt('grid.txt', skip_header=1)
+if 'savedir' in pars.__dict__:
+    savedir = pars.savedir
+else:
+    savedir = './'
+data = np.genfromtxt(savedir + 'grid.txt', skip_header=1)
 data = data.T
 Parr = np.exp(data[0])
 Parrbar = Parr/1e6    # Parr should be in bar, rather than in cgs unit
@@ -129,14 +133,14 @@ for j in range(len(Parr)):
         ygasnew[i, j] = gasmols[i].mu * cnt.mu * output_data.number_densities[0][gasindex[i]] / cache.cachegrid.rho_grid[j]
 
 # plot the atmosphere after equilibrium chemistry calculation
-ynew = np.vstack((y0[:ncod], ygasnew[len(extragas):], y0[-1]))
-myplot(Parr, ynew, ncod, ngas, plotmode='all')
-pdb.set_trace()
+# ynew = np.vstack((y0[:ncod], ygasnew[len(extragas):], y0[-1]))
+# myplot(Parr, ynew, ncod, ngas, plotmode='popup')
+# pdb.set_trace()
 
 ####### Radiation transfer part #######
 linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
 cloud_species = ['Mg2SiO4(c)_cm', 'MgSiO3(c)_cm', 'Fe(c)_cm', 'Al2O3(c)_cm']
-atmosphere = Radtrans(line_species=linespecies, cloud_species=cloud_species, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [0.6, 15])
+atmosphere = Radtrans(line_species=linespecies, cloud_species=cloud_species, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [0.6, 15], do_scat_emis = True)
 atmosphere.setup_opa_structure(Parrbar)
 
 mass_fractions = {}
@@ -174,54 +178,58 @@ sigma_lnorm = 1.05
 
 MMW = 2.34 * np.ones_like(Parr)
 
-R_pl = nc.r_jup_mean
-gravity = 435
+R_pl = 1.2*nc.r_jup_mean
+gravity = 12000
 P0 = 1e-4
-R_star = 1.2*nc.r_sun    # in Jupiter radius
+R_star = 1.49*nc.r_sun    # in Jupiter radius
+
+wavelength = nc.c/atmosphere.freq
+fconvert = 1e-3 * nc.c / wavelength**2 * 1e-4
 
 # calculate cloudy atmosphere
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+# atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='cloudy')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='cloudy')
 
 # calculate atmosphere without CO2
 mass_fractions['CO2'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no CO2')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO2')
 
 # calculate atmosphere without CO
 mass_fractions['CO2'] = ygasnew[4]
 mass_fractions['CO_all_iso_HITEMP'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no CO')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO')
 
 # calculate atmosphere without H2O
 mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
 mass_fractions['H2O_HITEMP'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no H2O')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2O')
 
 # calculate atmosphere without CH4
 mass_fractions['H2O_HITEMP'] = ygasnew[7]
 mass_fractions['CH4'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no CH4')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CH4')
 
 # calculate atmosphere without H2S
 mass_fractions['CH4'] = ygasnew[3]
 mass_fractions['H2S'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no H2S')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2S')
 
 # calculate clear atmosphere
 mass_fractions['H2S'] = ygasnew[9]
@@ -230,17 +238,17 @@ mass_fractions['Mg2SiO4(c)'] = np.zeros_like(Parr)
 mass_fractions['Fe(c)'] = np.zeros_like(Parr)
 mass_fractions['Al2O3(c)'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='clear', linestyle='--')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='clear', linestyle='--')
 
 plt.legend()
 plt.xscale('log')
 plt.xlabel('Wavelength (microns)')
-plt.ylabel(r'Transit depth (\%)')
+plt.ylabel(r'Planet flux $F_\nu$ (W m$^{-2}$ $\mu m^{-1}$)')
 ax = plt.gca()
-ax.set_xlim([2., 5.5])
-plt.savefig('spectrum.png', dpi=288)
+# ax.set_xlim([2., 5.5])
+plt.savefig(savedir + 'spectrum.png', dpi=288)
 plt.show()
 
 import os
