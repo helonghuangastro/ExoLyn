@@ -366,7 +366,7 @@ def cal_t_coag_inv(ap, n_p, cache, deltv=0):
     Dp = cnt.kb * Tarr / (6*np.pi * eta * ap)
 
     #following OM19
-    return -2*np.pi * n_p * ap**2 * deltv + 2*np.pi * np.minimum(vBM*ap, Dp) * ap * n_p
+    return 2*np.pi * n_p * ap**2 * deltv + 2*np.pi * np.minimum(vBM*ap, Dp) * ap * n_p
 
 def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
     ''' To calculate the condensation rate for all of the reaction. A more pythonic way to calculate it. '''
