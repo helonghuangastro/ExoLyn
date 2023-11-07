@@ -190,14 +190,14 @@ fconvert = 1e-3 * nc.c / wavelength**2 * 1e-4
 # atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='cloudy')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='cloudy', linewidth=3)
 
 # calculate atmosphere without CO2
 mass_fractions['CO2'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO2')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO2', alpha=0.6)
 
 # calculate atmosphere without CO
 mass_fractions['CO2'] = ygasnew[4]
@@ -205,7 +205,7 @@ mass_fractions['CO_all_iso_HITEMP'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO', alpha=0.6)
 
 # calculate atmosphere without H2O
 mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
@@ -213,7 +213,7 @@ mass_fractions['H2O_HITEMP'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2O')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2O', alpha=0.6)
 
 # calculate atmosphere without CH4
 mass_fractions['H2O_HITEMP'] = ygasnew[7]
@@ -221,7 +221,7 @@ mass_fractions['CH4'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CH4')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CH4', alpha=0.6)
 
 # calculate atmosphere without H2S
 mass_fractions['CH4'] = ygasnew[3]
@@ -229,7 +229,7 @@ mass_fractions['H2S'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, radius=radius, sigma_lnorm=sigma_lnorm)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2S')
+plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2S', alpha=0.6)
 
 # calculate clear atmosphere
 mass_fractions['H2S'] = ygasnew[9]
