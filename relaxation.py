@@ -181,7 +181,7 @@ def sol_py(X, B):
     for i in range(N-1, 0, -1):
         Xi = X[i-1]
 
-def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
+def newy(matsol, y0, atmosphere, alpha=1, **kwargs):
     '''
     solve for the guess for next iteration
     '''
@@ -202,7 +202,6 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
     while True:
         ynew = y0.copy()
         ynew[:nvar, :-1] += dy/2**i * alpha    # alpha is a parameter to limit the step. When the iteration becomes stuck, be more careful on the iteration.
-        ynew[:nvar, -1] = bcb()[:nvar]
         ynew[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-50)    # This line is necessary to limit the nuclei concentration, so that the particles will not be too large
         atmosphere.update(ynew)
         Emat = funs.E(atmosphere, **kwargs)
@@ -218,7 +217,6 @@ def newy(matsol, y0, bcb, atmosphere, alpha=1, **kwargs):
                     # pdb.set_trace()
                     ytry = y0.copy()
                     ytry[:nvar, :-1] -= dy/2**j * alpha
-                    ytry[:nvar, -1] = bcb()[:nvar]
                     ytry[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-50)
                     atmosphere.update(ytry)
                     Emat = funs.E(atmosphere, **kwargs)
@@ -262,7 +260,7 @@ def postprocess(yn, ncond, ngas):
 
     return yn
 
-def relaxation(efun, dedy, bcb, atmosphere, alpha=1, fixxn=False, **kwargs):    
+def relaxation(efun, dedy, atmosphere, alpha=1, fixxn=False, **kwargs):    
     """
     chris: could we perhaps tell a bit more on what we are doing in this
     function?
@@ -283,7 +281,7 @@ def relaxation(efun, dedy, bcb, atmosphere, alpha=1, fixxn=False, **kwargs):
     matsol = sol_f(dEdymat, Bmat)
 
     # solve for new y in next setp
-    ynew = newy(matsol, atmosphere.y, bcb, atmosphere, alpha, **kwargs)
+    ynew = newy(matsol, atmosphere.y, atmosphere, alpha, **kwargs)
 
     return ynew
 
@@ -311,7 +309,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
             atmospheren.update(atmosphere.y.copy())
             niter = 0 
             while(ctrl.status==100):
-                yn = relaxation(funs.E, funs.dEdy, funs.bcb, atmospheren, alpha, **kwargs)
+                yn = relaxation(funs.E, funs.dEdy, atmospheren, alpha, **kwargs)
                 ctrl.update(ynew=yn)
                 niter += 1
             print('[relaxation.iterate]:conducted ', niter, ' iterations; exit status = ', ctrl.status)

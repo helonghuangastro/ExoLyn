@@ -508,6 +508,7 @@ def init(atmosphere, method):
         return - pref * funs.cal_Mn(P)/(pars.Kzz*rho)
     for i in range(N):
         y0[-1, i] = quad(dxndlogP, logP[-1], logP[i], epsabs=1e-12, epsrel=1e-12)[0]
+    y0[-1, -1] = y0[-1, -2]**2/y0[-1, -3]    # by definition of the integration, xn would be 0 at the lower boundary. So here interpolate
 
     # calculate solid concentration 
     if method=='scipy':
