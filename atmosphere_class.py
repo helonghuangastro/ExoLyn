@@ -49,3 +49,12 @@ class atmosphere():
         self.Sc = Sc2
         
         return
+
+    def update_grid(self, grid, cache):
+        ''' Change the grid '''
+        self.grid = grid
+        self.dx = grid[1]-grid[0]
+        self.cachegrid = cache.cachegrid
+        self.cachemid = cache.cachemid
+
+        return

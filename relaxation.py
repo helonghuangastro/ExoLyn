@@ -260,10 +260,51 @@ def postprocess(yn, ncond, ngas):
 
     return yn
 
+def adjust_upper(atmosphere, atmospheren, **kwargs):
+    ''' automatically change the upper atmosphere '''
+    Parr = np.exp(atmosphere.grid)
+    xc_tot = np.sum(atmosphere.xc, axis=0)    # total solid concentration
+    xc_tot_max = np.max(xc_tot)
+    N = atmosphere.N
+    chem = atmosphere.chem
+
+    # extend the upper boundary when xc at the upper boundary is too large
+    while(xc_tot[0]>xc_tot_max/1e10):
+        Parr = np.logspace(np.log10(Parr[0])-1, np.log10(Parr[-1]), N)
+        cache = funs.init_cache(Parr, chem)
+        logP = np.log(Parr)
+        ynew = np.empty_like(atmosphere.y)
+        for i in range(len(ynew)):
+            ynew[i] = np.interp(logP, atmosphere.grid, atmosphere.y[i])    # interpolate to get new y
+        atmosphere.update_grid(logP, cache)
+        atmosphere.update(ynew)
+        for i in range(10):
+            relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
+        xc_tot = np.sum(atmosphere.xc, axis=0)
+        xc_tot_max = np.max(xc_tot)
+
+    # shrink the upper boundary when xc at the upper boundary is too small
+    idx = np.where(xc_tot>=xc_tot_max/1e10)[0][0]
+    Parr = np.logspace(np.log10(Parr[idx]), np.log10(Parr[-1]), N)
+    cache = funs.init_cache(Parr, chem)
+
+    # update the atmosphere class
+    logP = np.log(Parr)
+    ynew = np.empty_like(atmosphere.y)
+    for i in range(len(ynew)):
+        ynew[i] = np.interp(logP, atmosphere.grid, atmosphere.y[i])    # interpolate to get new y
+    atmosphere.update_grid(logP, cache)
+    atmospheren.update_grid(logP, cache)
+    atmosphere.update(ynew)
+
+    for i in range(10):
+        relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
+
+    return
+
 def relaxation(efun, dedy, atmosphere, alpha=1, fixxn=False, **kwargs):    
     """
-    chris: could we perhaps tell a bit more on what we are doing in this
-    function?
+    Calculate residual and Jacobi matrix. Solve the matrix equations and get next guess solution
     """
     # calculate E, B matrix
     Emat = efun(atmosphere, **kwargs)
@@ -316,6 +357,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
             # plot if verbose='verbose'
             if pars.verboselevel >= 1:
                 myplot(Parr, atmospheren.y, ncond, ngas, plotmode=pars.plotmode)
+            # successful case
             if ctrl.status==0:
                 atmosphere.update(yn)
                 ctrl.clear()
@@ -323,6 +365,9 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
                 fsucc = fpara
                 if len(ffail)==0:
                     ffail = np.array([np.minimum(1., 10*fpara)])
+                if fpara_name == 'fsed' and True:
+                    adjust_upper(atmosphere, atmospheren, **kwargs)
+            # failed case
             else:
                 ctrl.clear()
                 if fsucc==0:
