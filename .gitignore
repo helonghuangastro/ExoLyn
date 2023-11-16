@@ -6,3 +6,4 @@ util/failpars/
 *.png
 *.so
 *.swp
+paperplot/
