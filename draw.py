@@ -100,6 +100,9 @@ def myplot(Parr, y0, ncod, ngas, plotmode=0, **kwargs):
             l, = ax.loglog(y0[ncod+i], Parr/1e6, label=pars.gas[i]+'(v)', linestyle='--')
             lnarr.append(l)
 
+    l, = ax.loglog(y0[-1], Parr/1e6, label='nuclei', color='k')
+    lnarr.append(l)
+
     labs = [x.get_label() for x in lnarr]
 
     ax.set_xlabel('Mass concentration')

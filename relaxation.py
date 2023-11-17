@@ -302,6 +302,14 @@ def adjust_upper(atmosphere, atmospheren, **kwargs):
 
     return
 
+def saveplot(atmosphere, N, alpha, **kwargs):
+    ''' save a series of plot to debug '''
+    import shutil
+    for i in range(N):
+        yn = relaxation(funs.E, funs.dEdy, atmosphere, alpha, **kwargs)
+        myplot(Parr, yn, ncond, ngas, plotmode='save')
+        shutil.move('result.png', './saveplot/result' + str(i) + '.png')
+
 def relaxation(efun, dedy, atmosphere, alpha=1, fixxn=False, **kwargs):    
     """
     Calculate residual and Jacobi matrix. Solve the matrix equations and get next guess solution
