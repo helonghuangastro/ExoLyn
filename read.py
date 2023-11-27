@@ -127,6 +127,7 @@ class reaction():
             delG += moldata[molename]*st
             if molename.strip('(s)')!=self.solid:
                 netnu -= st
+            munu /= molecules[molename].mu**st
         for molename, st in self.reactant.items():
             delG -= moldata[molename]*st
             netnu += st
