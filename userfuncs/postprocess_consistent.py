@@ -6,6 +6,7 @@ petitRADTRANS: https://petitradtrans.readthedocs.io/en/latest/
 '''
 import numpy as np
 from matplotlib import pyplot as plt
+from scipy.interpolate import RectBivariateSpline
 from petitRADTRANS import Radtrans
 from petitRADTRANS import nat_cst as nc
 import sys
@@ -61,7 +62,9 @@ cache = funs.init_cache(Parr, chem)
 ap = funs.cal_ap(y0[:ncod], y0[-1])
 ap[-1] = ap[-2]
 xc = y0[:ncod]
-xc = xc[[0, 1, 7, 9]]    # only choose cloud species that's included in petitRADTRANS
+# xc = xc[[0, 1, 7, 9]]    # only choose cloud species that's included in petitRADTRANS
+xn = y0[-1]
+n_p = funs.cal_np(xn, cache.cachegrid)
 Tarr = cache.cachegrid.T_grid
 
 ygasnew = np.empty((len(gasmols), len(Parr)))
@@ -133,10 +136,41 @@ ynew = np.vstack((y0[:ncod], ygasnew[len(extragas):], y0[-1]))
 myplot(Parr, ynew, ncod, ngas, plotmode='all')
 pdb.set_trace()
 
+####### calculate effective refractory index #######
+
+####### calculate kappa #######
+
 ####### Radiation transfer part #######
+# read the file containing kappa on each wavelength and pressure
+kappadata = np.empty((100, len(Parr)))
+for i in range(len(Parr)):
+    filename = f'../util/coeff/{i}.txt'
+    kappa = np.genfromtxt(filename, names=True)
+    kappadata[:, i] = kappa['kappa_ext']
+
+# convert single particle extinction coefficient to total opacity
+kappadata = kappadata/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
+
+# calculate spline object
+spobj = RectBivariateSpline(kappa['wavelengthmicron'], Parrbar, kappadata)
+
+# cloud opacity function
+def cloud_opas(spobj):
+    ''' return cloud opacity (cm^2/g)
+        the parameter is a spline object from scipy.interpolate.RectBivariateSpline
+    '''
+    def give_opacity(wlen, press):
+        ''' wavelength in micron and pressure in bar '''
+        pressmat, wlenmat = np.meshgrid(press, wlen)
+        retVal = spobj.ev(wlenmat, pressmat)
+        return retVal
+
+    return give_opacity
+
 linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
-cloud_species = ['Mg2SiO4(c)_cm', 'MgSiO3(c)_cm', 'Fe(c)_cm', 'Al2O3(c)_cm']
-atmosphere = Radtrans(line_species=linespecies, cloud_species=cloud_species, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [1, 20])
+# cloud_species = ['Mg2SiO4(c)_cm', 'MgSiO3(c)_cm', 'Fe(c)_cm', 'Al2O3(c)_cm']
+# atmosphere = Radtrans(line_species=linespecies, cloud_species=cloud_species, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [1, 20])
+atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [1, 20])
 atmosphere.setup_opa_structure(Parrbar)
 
 mass_fractions = {}
@@ -154,23 +188,23 @@ mass_fractions['TiO_all_Exomol'] = ygasnew[10]
 mass_fractions['Al'] = ygasnew[11]
 
 # set the mass fraction for cloud
-xcdom = np.argmax(xc, axis=0)    # dominant species
-xc[0, np.where(xcdom!=0)[0]] = 0
-xc[1, np.where(xcdom!=1)[0]] = 0
-xc[2, np.where(xcdom!=2)[0]] = 0
-xc[3, np.where(xcdom!=3)[0]] = 0
-mass_fractions['MgSiO3(c)'] = xc[0]
-mass_fractions['Mg2SiO4(c)'] = xc[1]
-mass_fractions['Fe(c)'] = xc[2]
-mass_fractions['Al2O3(c)'] = xc[3]
+# xcdom = np.argmax(xc, axis=0)    # dominant species
+# xc[0, np.where(xcdom!=0)[0]] = 0
+# xc[1, np.where(xcdom!=1)[0]] = 0
+# xc[2, np.where(xcdom!=2)[0]] = 0
+# xc[3, np.where(xcdom!=3)[0]] = 0
+# mass_fractions['MgSiO3(c)'] = xc[0]
+# mass_fractions['Mg2SiO4(c)'] = xc[1]
+# mass_fractions['Fe(c)'] = xc[2]
+# mass_fractions['Al2O3(c)'] = xc[3]
 
 # set the particle radius for the cloud
-radius = {}
-radius['MgSiO3(c)'] = ap
-radius['Mg2SiO4(c)'] = ap
-radius['Fe(c)'] = ap
-radius['Al2O3(c)'] = ap
-sigma_lnorm = 1.05
+# radius = {}
+# radius['MgSiO3(c)'] = ap
+# radius['Mg2SiO4(c)'] = ap
+# radius['Fe(c)'] = ap
+# radius['Al2O3(c)'] = ap
+# sigma_lnorm = 1.05
 
 MMW = 2.34 * np.ones_like(Parr)
 
@@ -179,10 +213,11 @@ gravity = pars.g
 P0 = 1e-4
 R_star = nc.r_sun    # in Jupiter radius
 
+plt.figure(figsize=(12, 6))
 # calculate atmosphere without CO2
 mass_fractions['CO2'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, give_absorption_opacity=cloud_opas(spobj))
 
 plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no CO2', alpha=0.5)
 
@@ -190,7 +225,7 @@ plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label
 mass_fractions['CO2'] = ygasnew[4]
 mass_fractions['CO_all_iso_HITEMP'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, give_absorption_opacity=cloud_opas(spobj))
 
 plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no CO', alpha=0.5)
 
@@ -198,7 +233,7 @@ plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label
 mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
 mass_fractions['H2O_HITEMP'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, give_absorption_opacity=cloud_opas(spobj))
 
 plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no H2O', alpha=0.5)
 
@@ -206,7 +241,7 @@ plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label
 mass_fractions['H2O_HITEMP'] = ygasnew[7]
 mass_fractions['CH4'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, give_absorption_opacity=cloud_opas(spobj))
 
 plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no CH4', alpha=0.5)
 
@@ -214,29 +249,25 @@ plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label
 mass_fractions['CH4'] = ygasnew[3]
 mass_fractions['H2S'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, give_absorption_opacity=cloud_opas(spobj))
 
 plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='no H2S', alpha=0.5)
 
 # calculate clear atmosphere
 mass_fractions['H2S'] = ygasnew[9]
-mass_fractions['MgSiO3(c)'] = np.zeros_like(Parr)
-mass_fractions['Mg2SiO4(c)'] = np.zeros_like(Parr)
-mass_fractions['Fe(c)'] = np.zeros_like(Parr)
-mass_fractions['Al2O3(c)'] = np.zeros_like(Parr)
+# mass_fractions['MgSiO3(c)'] = np.zeros_like(Parr)
+# mass_fractions['Mg2SiO4(c)'] = np.zeros_like(Parr)
+# mass_fractions['Fe(c)'] = np.zeros_like(Parr)
+# mass_fractions['Al2O3(c)'] = np.zeros_like(Parr)
 
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0)
 
 plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='clear', linestyle='--', alpha=0.5)
 
 # calculate cloudy atmosphere
-mass_fractions['MgSiO3(c)'] = xc[0]
-mass_fractions['Mg2SiO4(c)'] = xc[1]
-mass_fractions['Fe(c)'] = xc[2]
-mass_fractions['Al2O3(c)'] = xc[3]
-atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
+atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, Pcloud=100, give_absorption_opacity=cloud_opas(spobj))
 
-plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='cloudy', color='k')
+plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='cloudy', color='k', linewidth=1.5)
 
 plt.legend()
 plt.xscale('log')
@@ -244,7 +275,12 @@ plt.xlabel('Wavelength (microns)')
 plt.ylabel(r'Transit depth (\%)')
 ax = plt.gca()
 ax.set_xlim([1, 20])
-plt.savefig('spectrumold.png', dpi=288)
+#get x and y limits
+x_left, x_right = ax.get_xlim()
+y_low, y_high = ax.get_ylim()
+#set aspect ratio
+# ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*0.02)
+plt.savefig('spectrumMg.png', dpi=288)
 plt.show()
 
 import os
