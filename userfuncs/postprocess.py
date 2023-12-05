@@ -179,6 +179,7 @@ gravity = pars.g
 P0 = 1e-4
 R_star = nc.r_sun    # in Jupiter radius
 
+plt.figure(figsize=(12, 6))
 # calculate atmosphere without CO2
 mass_fractions['CO2'] = np.zeros_like(Parr)
 

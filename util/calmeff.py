@@ -90,11 +90,12 @@ def writelnk(mmat, wavelength, rho, folder='util/meff'):
 folder = '/home/helong/software/LX-MIE/compilation/'
 datadict = {'MgSiO3':'MgSiO3_amorph_sol-gel.dat', 'Mg2SiO4':'Mg2SiO4_amorph_sol-gel.dat',
             'SiO2':'SiO2_amorph.dat', 'MgO':'MgO.dat', 'FeO':'FeO.dat', 'FeS':'FeS.dat',
-            'Fe2O3':'Fe2O3.dat', 'Fe':'Fe.dat', 'TiO2':'TiO2_anatase.dat', 'Al2O3':'Al2O3.dat'}
+            'Fe2O3':'Fe2O3.dat', 'Fe':'Fe.dat', 'TiO2':'TiO2_anatase.dat', 'Al2O3':'Al2O3.dat',
+            'KCl':'KCl.dat', 'NaCl':'NaCl.dat'}
 files = datadict.values()
 
 # wavelength (micron) of interest
-wavelength = np.logspace(np.log10(1), np.log10(20), 100)
+# wavelength = np.logspace(np.log10(1), np.log10(20), 100)
 
 # n+ik for each species
 # mspecies = np.empty((len(wavelength), len(datadict)), dtype=complex)
@@ -107,7 +108,7 @@ wavelength = np.logspace(np.log10(1), np.log10(20), 100)
 #     mspecies[:, i].real = n
 #     mspecies[:, i].imag = k
 
-frac = np.array([0.2,0.1,0.05,0.24,0.01,0.01,0.01,0.2,0.09,0.09])    # fraction of each species
+# frac = np.array([0.2,0.1,0.05,0.24,0.01,0.01,0.01,0.2,0.09,0.09])    # fraction of each species
 # frac = np.array([0.12,0.01,0.01,0.01,0.01,0.01,0.01,0.8,0.01,0.01])
 # sortidx = np.argsort(-frac)    # rank from large to small
 
@@ -150,7 +151,7 @@ frac = np.array([0.2,0.1,0.05,0.24,0.01,0.01,0.01,0.2,0.09,0.09])    # fraction 
 #         marr[k] = mold
         # print(mold)
 
-marr = cal_eff_m(frac, list(datadict.keys()), wavelength)
+# marr = cal_eff_m(frac, list(datadict.keys()), wavelength)
 
 # plot the relation between pure material and mixed material --scatter data
 # from matplotlib import pyplot as plt

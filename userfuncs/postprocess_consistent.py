@@ -208,10 +208,10 @@ mass_fractions['Al'] = ygasnew[11]
 
 MMW = 2.34 * np.ones_like(Parr)
 
-R_pl = nc.r_jup_mean
+R_pl = pars.Rp
 gravity = pars.g
 P0 = 1e-4
-R_star = nc.r_sun    # in Jupiter radius
+R_star = pars.R_star    # in Jupiter radius
 
 plt.figure(figsize=(12, 6))
 # calculate atmosphere without CO2
