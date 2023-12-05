@@ -20,9 +20,9 @@ import output
 class control():
     '''
     return: 100 -- try next iteration
-            0 -- converged, try next parameter
-            -1 -- exceed maximum iteration
-            -2 -- did not converge to the desired error tolerance
+              0 -- converged, try next parameter
+             -1 -- exceed maximum iteration
+             -2 -- did not converge to the desired error tolerance
     '''
     def __init__(self, mode='E', **kwargs):
         self.mode = mode    # which criterior to use to judge the status of the convergence
@@ -201,15 +201,23 @@ def newy(matsol, y0, atmosphere, alpha=1, **kwargs):
     i = 0
     while True:
         ynew = y0.copy()
-        ynew[:nvar, :-1] += dy/2**i * alpha    # alpha is a parameter to limit the step. When the iteration becomes stuck, be more careful on the iteration.
-        ynew[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-50)    # This line is necessary to limit the nuclei concentration, so that the particles will not be too large
+        # alpha is a parameter to limit the step. When the iteration becomes stuck, 
+        # be more careful on the iteration.  // CWO: unclear to me
+        ynew[:nvar, :-1] += dy/2**i * alpha    
+
+        # This line is necessary to limit the nuclei concentration, so that the particles will 
+        # not be too large // CWO: you mean the 1e-50? Unclear
+        ynew[-1, :-1] = np.maximum(ynew[-1, :-1], 1e-50) 
         atmosphere.update(ynew)
         Emat = funs.E(atmosphere, **kwargs)
         Enew = np.mean(np.abs(Emat))
+
+        #CWO: why again do we have this condition?
         if Enew<Eold*1.2:
             break
+
         if i>=5:
-            print(f'[relaxation]WARNING: In the non-linear regime, no improvement after step reduction by factor {2**i}')
+            print(f'[relaxation.newy]WARNING: In the non-linear regime, no improvement after step reduction by factor {2**i}')
             
             if False:
                 # this is a trial that try to find solution from the opposite direction ......
@@ -336,13 +344,18 @@ def relaxation(efun, dedy, atmosphere, alpha=1, fixxn=False, **kwargs):
 
 def iterate(atmosphere, atmospheren, fparas, ctrl):
     '''
-    A function for converging any fudging parameters.
+    A function to converge over a range of control parameters "fparas".
+    Each fpara starts from an off state (fpara=0) whose solution converges. 
+    A solution with fpara=1 is sought for.
+    If the solution fails, fpara is reduced; if it is successful, fpara increases
+    until the solution converges at fpara=1
+
     Parameters:
         atmosphere: atmosphere class for successfully converged atmosphere
-        atmospheren: atmosphere class to be used during converging
-        fparas: a list of fudging parameters to be converged, the order matters
+        atmospheren: dummy atmosphere class used during iteration
+        fparas: a list of fudge parameters to be converged over. The order matters
         ctrl: controlling class for convergence
-        isplot: whether plot the atmosphere structure after converging each parameter
+        isplot: whether to plot the atmosphere profile after converging on each parameter
     '''
     kwargs = {}
     for fpara_name in fparas:

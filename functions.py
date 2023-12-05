@@ -46,6 +46,7 @@ class sim_cache():
                 print('Not a numpy.ndarray object')
         return cache_single
 
+
 def E(atmosphere, **kwargs):
     '''
     return the error value of the equations
@@ -90,6 +91,7 @@ def E(atmosphere, **kwargs):
     exvdif = edif(pref_dif, atmosphere.xv, dx) * fdif
 
     # error for xn
+    ###CWO: I see this line also later... consider making it a function
     deltv = -0.5 * atmosphere.v_sed * fsed    # collision velocity due to sedimentation
     t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.np, atmosphere.cachegrid, deltv)
     exndif = edif(pref_dif, atmosphere.xn, dx) * fdif
@@ -369,7 +371,8 @@ def cal_t_coag_inv(ap, n_p, cache, deltv=0):
     return 2*np.pi * n_p * ap**2 * deltv + 2*np.pi * np.minimum(vBM*ap, Dp) * ap * n_p
 
 def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
-    ''' To calculate the condensation rate for all of the reaction. A more pythonic way to calculate it. '''
+    ''' To calculate the condensation rate for all of the reaction. 
+        A more pythonic way to calculate it. '''
     # chemistry data
     gasst = chem.gasst
     mugas = np.atleast_2d(chem.mugas).T

@@ -12,7 +12,7 @@ def writeatm(y, grid, filename='grid.txt', additional='', fmt1='{:12.4e}'):
     else:
         savedir = pars.savedir
 
-    print("[output]:writing output to filen: "+filename)
+    print("[output]:writing output to file: "+filename)
     with open(savedir + filename, 'w') as opt:
         # write additional
         opt.write(additional)

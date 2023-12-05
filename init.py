@@ -581,10 +581,10 @@ def findbound(Pa, Pb, N, chem):
         # find the bottom of cloud where everything evaporates
         if np.all(SR.sum(axis=0)<1.):
             # if the super saturation ratio is too low, there will be no cloud
-            print('[init]WARNING: total super saturation ratio smaller than 1 everywhere, the atmosphere is very clean.')
+            print('[init.findbound]WARNING: total super saturation ratio smaller than 1 everywhere, the atmosphere is very clean.')
             bottomidx = N-1
         elif np.all(SR.sum(axis=0)>1.):
-            print('[init]WARNING: total super saturation ratio larger than 1 everywhere, may artificially truncate the cloud.')
+            print('[init.findbound]WARNING: total super saturation ratio larger than 1 everywhere, may artificially truncate the cloud.')
             bottomidx = N-1
         else:
             bottomidx = np.where((SR.sum(axis=0)[1:]<1) & (SR.sum(axis=0)[:-1]>1))[0][0]+1
@@ -594,13 +594,14 @@ def findbound(Pa, Pb, N, chem):
         Parr = np.logspace(np.log10(Pa), np.log10(Pb), pars.N)
         cache = funs.init_cache(Parr, chem)
         if cache.cachegrid.T_grid[-1] > chem.gibbsdata['Tref'][-1]:
-            print('[init]WARNING: No Gibbs energy data given at the highest temperature. Extrapolating the Gibbs energy.')
+            print('[init.findbound]WARNING: No Gibbs energy data given at the highest temperature. Extrapolating the Gibbs energy.')
         SR = getS(cache)
 
     # check unimportant species whose super saturation ratio is always smaller than 1
+    # CWO: so what ?!
     for i, reaction in enumerate(cache.chem.reactions):
         if np.all(SR[i]<1.):
-            print('[init]INFO: ' + reaction.solid + ' is an unimportant species with super saturation ratio < 1 everywhere.')
+            print('[init.findbound]INFO: ' + reaction.solid + ' is an unimportant species with super saturation ratio < 1 everywhere.')
     
     print('[init]SUCCESS: finding domain for the problem.')
 

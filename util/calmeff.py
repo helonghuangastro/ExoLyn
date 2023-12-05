@@ -4,7 +4,7 @@ import pdb
 def preparepoly(marr, i):
     '''
     prepare polynomial for a single species: (m_e^2-m_i^2)*\Multiply_{j!=i}(m_e^2+m_j^2/2)
-    marr: complex array of refractory indexes
+    marr: complex array of refractory indices
     '''
     N = len(marr)
     rootarr = np.empty(2*N, dtype=complex)
