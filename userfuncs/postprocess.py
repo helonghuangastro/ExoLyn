@@ -27,7 +27,7 @@ def write_element(elementgrid):
         for element, abundance in elementgrid.items():
             opt.write(element + ' ' + str(abundance) + '\n')
 
-chem = read.chemdata(pars.gibbsfile)
+chem = read.chemdata(pars.rdir + pars.gibbsfile)
 # other interesting species and their concentration
 extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
 extragascon = np.array([8e-3, 1, 0.33, 0, 0])
