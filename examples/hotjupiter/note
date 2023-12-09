@@ -1,0 +1,5 @@
+-put parameters.py here and then run with
+
+python3 ../../src/relaxation.py
+
+or (better) after putting relation.py in the path...
