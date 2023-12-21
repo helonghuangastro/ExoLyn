@@ -1,5 +1,6 @@
 import numpy as np
 import pdb
+import os
 
 def preparepoly(marr, i):
     '''
@@ -35,6 +36,15 @@ def cal_eff_m(abundance, solid, wavelength):
         # initialize
         mold = mspecies[k][sortidx[0]]
         # print(mold)
+        # try to include everything at once. If that succeed, then no need to iterate
+        polyidx = np.zeros(2*len(solid)+1, dtype=complex)
+        for i in range(len(solid)):
+            polyidx += preparepoly(mspecies[k], i) * abundance[i]
+        allroots = np.roots(polyidx)
+        physicalidx = np.where((allroots.real>0)&(allroots.imag>0))[0]    # physical solution for the refractory index.
+        if len(physicalidx)==1:
+            marr[k] = allroots[physicalidx]
+            continue
 
         # find the polynomial index of the equation, with a new species
         for n in range(2, len(solid)+1):
@@ -52,18 +62,24 @@ def cal_eff_m(abundance, solid, wavelength):
                 frudge = ffail[-1]
                 polyidx = polyidxold + polyidxnew * frudge
                 allroots = np.roots(polyidx)
-                change = np.abs(allroots-mold)
-                nearidx = np.argmin(change)
-
-                if np.all(change[nearidx]*10<np.delete(change, nearidx)):
+                physicalidx = np.where((allroots.real>0)&(allroots.imag>0))[0]    # physical solution for the refractory index.
+                if len(physicalidx)==1:
                     ffail = np.delete(ffail, -1)
                     fsucc = frudge
-                    mold = allroots[nearidx]
+                    mold = allroots[physicalidx[0]]
                 else:
-                    if fsucc==0:
-                        ffail = np.append(ffail, ffail[-1]/10)
+                    change = np.abs(allroots-mold)
+                    nearidx = np.argmin(change)
+
+                    if np.all(change[nearidx]*10<np.delete(change, nearidx)):
+                        ffail = np.delete(ffail, -1)
+                        fsucc = frudge
+                        mold = allroots[nearidx]
                     else:
-                        ffail = np.append(ffail, np.sqrt(fsucc*frudge))
+                        if fsucc==0:
+                            ffail = np.append(ffail, ffail[-1]/10)
+                        else:
+                            ffail = np.append(ffail, np.sqrt(fsucc*frudge))
 
             marr[k] = mold
 
@@ -78,6 +94,8 @@ def cal_eff_m_all(abundance, solid, wavelength):
     return mmat
 
 def writelnk(mmat, wavelength, rho, folder='util/meff'):
+    if not os.path.exists(folder):
+        os.mkdir(folder)
     Nwlen = len(wavelength)
     for i in range(mmat.shape[0]):
         filename = folder + f'/{i}.lnk'
