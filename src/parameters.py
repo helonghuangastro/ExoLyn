@@ -45,6 +45,9 @@ if len(sys.argv)>1:
 else:
     parafilename = 'parameters.txt'
 
+i1 = sys.argv[0].rfind('/')
+paralist['rdir'] = sys.argv[0][:i1+1]
+
 with open(parafilename, 'r') as ipt:
     i = -1
     for line in ipt:
@@ -96,6 +99,7 @@ with open(parafilename, 'r') as ipt:
                 value = np.array(value)
 
         # evaluate the value
+        # TBD: also including +, - and be compatible with string manipulation
         # Only compatible with *, /, **
         elif valuetype == 4:
             valuelist = valuestr.split(' ')

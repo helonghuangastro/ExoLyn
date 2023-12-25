@@ -19,8 +19,7 @@ P_star = 60     # nucleation height, in cgs
 
 gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
 xvb = [7.56e-4, 1.32e-3, 1e-3, 1e-3, 8e-4, 1e-5, 7e-5]
-reactionfile = 'reactions.txt'
-gibbsfile = 'gibbs.txt'
+gibbsfile = '../../tables/gibbs.txt'
 
 T_star = 5778    # stellar temperature, K
 R_star = cnt.R_sun  # stellar radius, cm
@@ -51,7 +50,7 @@ verbose = 'quiet'
 # -- 'none'     :do nothing 
 
 plotmode = 'popup'
-writeoutputfile = False
+writeoutputfile = True
 
 ##suppress warnings?
 #

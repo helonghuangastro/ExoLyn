@@ -4,18 +4,22 @@ In ynew function, require the Error to at most increase by a factor of 10 in con
 TBD:
 1. multiple reactions leading to one condensate
 '''
+import sys
 import numpy as np
 import parameters as pars
 import functions as funs
 import constants as cnt
-from draw import myplot
 from fmatrixsol import matrixsol
 import init
 import pdb
 import atmosphere_class
 import read
-import sys
 import output
+
+# import the plot module
+if pars.verboselevel>-2 and pars.plotmode!='none':
+    sys.path.append(pars.rdir + '../util/')
+    from draw import myplot
 
 class control():
     '''
@@ -415,7 +419,7 @@ if __name__ == '__main__':
         warnings.filterwarnings('ignore')
 
     # read in all the chemistry data
-    chem = read.chemdata(pars.rdir+pars.gibbsfile)
+    chem = read.chemdata(pars.gibbsfile)
 
     # find the boundary of the domain
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
