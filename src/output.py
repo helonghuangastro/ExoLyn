@@ -2,9 +2,10 @@ import numpy as np
 import pdb
 import parameters as pars
 
-def writeatm(y, grid, filename='grid.txt', additional='', fmt1='{:12.4e}'):
+def writeatm(y, grid, additional='', fmt1='{:12.4e}'):
     """
     chris: what is the meaning of "additional"?
+    Answer: any additional information the user wants to write
     """
 
     if 'savedir' not in pars.__dict__:
@@ -12,6 +13,7 @@ def writeatm(y, grid, filename='grid.txt', additional='', fmt1='{:12.4e}'):
     else:
         savedir = pars.savedir
 
+    filename = 'grid' + pars.runname + '.txt'
     print("[output]:writing output to file: "+filename)
     with open(savedir + filename, 'w') as opt:
         # write additional

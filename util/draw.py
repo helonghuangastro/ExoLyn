@@ -20,7 +20,7 @@ def myplot_v2(Parr, y0, ncod, ngas, save=0):
     ax = plt.gca()
     axs = plt.twiny()
 
-    axs.loglog(s*1e3, Parr/1e6, label='size', color=[0.7,0.7,0.7, 0.7], linewidth=3)
+    axs.loglog(s*1e4, Parr/1e6, label='size', color=[0.7,0.7,0.7, 0.7], linewidth=3)
 
     xcdom = np.argmax(xc, axis=0)    # dominant species
     spedom = np.unique(xcdom)    # all the species that once dominate the xc
@@ -77,7 +77,7 @@ def myplot(Parr, y0, ncod, ngas, plotmode=0, **kwargs):
     ax = plt.gca()
     axs = ax.twiny()
 
-    axs.loglog(s*1e3, Parr/1e6, label='size', color=[0.7,0.7,0.7, 0.7], linewidth=3)    # divide by 1e6 to convert cgs to bar
+    axs.loglog(s*1e4, Parr/1e6, label='size', color=[0.7,0.7,0.7, 0.7], linewidth=3)    # divide by 1e6 to convert cgs to bar
 
     # select certain species
     if 'gasplot' in kwargs.keys():
@@ -109,8 +109,10 @@ def myplot(Parr, y0, ncod, ngas, plotmode=0, **kwargs):
     ax.set_ylabel('Pressure (bar)')
     axs.set_xlabel(r'Particle size ($\mu$m)', color='grey')
 
-    ax.set_xlim([1e-9, 1e-2])
-    axs.set_xlim([1.1e-4, 10.])
+    xmax = np.max(y0)
+    apmax = np.max(s*1e4)
+    ax.set_xlim([xmax/1e7, xmax*1.5])
+    axs.set_xlim([pars.an*1e4, apmax*1.5])
     ax.invert_yaxis()
     axs.tick_params(colors='grey', axis='x', which='both')
     axs.spines['top'].set_color('grey')

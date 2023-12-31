@@ -12,15 +12,15 @@ from petitRADTRANS import nat_cst as nc
 import sys
 sys.path.append('/home/helong/software/miniforge3/lib/python3.10/site-packages')
 import pyfastchem
-sys.path.append('../')
+sys.path.append('../../src')
 import read
 import constants as cnt
 import parameters as pars
 import functions as funs
 import itertools
 import pdb
-from draw import myplot
 sys.path.append('../../util')
+from draw import myplot
 from calmeff import cal_eff_m_all, writelnk
 from calkappa import cal_opa_all
 
@@ -31,8 +31,8 @@ def write_element(elementgrid):
         for element, abundance in elementgrid.items():
             opt.write(element + ' ' + str(abundance) + '\n')
 
-gibbsfolder = '../../'
-chem = read.chemdata(gibbsfolder + pars.gibbsfile)
+# gibbsfolder = '../../'
+chem = read.chemdata(pars.gibbsfile)
 # other interesting species and their concentration
 extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
 extragascon = np.array([8e-3, 1, 0.33, 0, 0])
@@ -56,7 +56,7 @@ for i in range(len(extragas)):
 ncod = len(pars.solid)
 ngas = len(pars.gas)
 
-data = np.genfromtxt('./grid' + pars.runname + '.txt', skip_header=1)
+data = np.genfromtxt('./grid.txt', skip_header=1)
 data = data.T
 Parr = np.exp(data[0])
 Parrbar = Parr/1e6    # Parr should be in bar, rather than in cgs unit
@@ -116,12 +116,9 @@ for j in range(len(Parr)):
         num = y0[i+ncod, j] / gasmol.mu
         for element in gasmol.element.keys():
             elementgrid[element] += num * gasmol.element[element]
-
-    # normalize the elemental abundance
-    totalnumber = np.sum(list(elementgrid.values()))
     # transfer to the log version
     for element, abundance in elementgrid.items():
-        elementgrid[element] = np.log10(abundance/totalnumber)+12
+        elementgrid[element] = np.log10(abundance)+12
 
     write_element(elementgrid)
     fastchem = pyfastchem.FastChem('./input.dat',
@@ -141,7 +138,7 @@ for j in range(len(Parr)):
 
 # plot the atmosphere after equilibrium chemistry calculation
 ynew = np.vstack((y0[:ncod], ygasnew[len(extragas):], y0[-1]))
-myplot(Parr, ynew, ncod, ngas, plotmode='popup')
+# myplot(Parr, ynew, ncod, ngas, plotmode='all')
 # pdb.set_trace()
 
 ####### calculate effective refractory index #######
@@ -152,120 +149,29 @@ writelnk(mmat, wlen, pars.rho_int, folder='meff')
 
 ####### calculate kappa #######
 opobj = cal_opa_all('meff', ap, write=False)
-pdb.set_trace()
-kappascadata = opobj['kext']/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
-kappaabsdata = opobj['kext']/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
-# pdb.set_trace()
+kappadata = opobj['kext']/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
 
-spsca = RectBivariateSpline(opobj['wlen'], Parrbar, kappascadata)
-spabs = RectBivariateSpline(opobj['wlen'], Parrbar, kappaabsdata)
+# calculate the optical depth
+logP = data[0]
+dx   = logP[1] - logP[0]
+dtau = kappadata * cache.cachegrid.rho_grid * cnt.kb * cache.cachegrid.T_grid / (pars.mgas*pars.g) * dx    # optical depth at each grid point
+taucum = np.cumsum(dtau, axis=1)    # cumulative opacity from atmosphere top to bottom
+Ptau1 = np.empty_like(wlen)         # tau_cloud = 1 surface at each wavelength
+for i in range(len(wlen)):
+    idx = np.where(taucum[i]>1.)[0]
+    if len(idx)>0:
+        Ptau1[i] = Parrbar[idx[0]]
+    else:
+        Ptau1[i] = Parrbar[-1]
 
-# cloud opacity function
-def cloud_opas(spobj):
-    ''' return cloud opacity (cm^2/g)
-        the parameter is a spline object from scipy.interpolate.RectBivariateSpline
-    '''
-    def give_opacity(wlen, press):
-        ''' wavelength in micron and pressure in bar '''
-        pressmat, wlenmat = np.meshgrid(press, wlen)
-        retVal = spobj.ev(wlenmat, pressmat)
-        return retVal
-
-    return give_opacity
-
-####### Radiation transfer part #######
-linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
-# cloud_species = ['Mg2SiO4(c)_cm', 'MgSiO3(c)_cm', 'Fe(c)_cm', 'Al2O3(c)_cm']
-# atmosphere = Radtrans(line_species=linespecies, cloud_species=cloud_species, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [0.6, 15], do_scat_emis = True)
-atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [wlen[0], wlen[-1]])
-atmosphere.setup_opa_structure(Parrbar)
-
-mass_fractions = {}
-mass_fractions['H2'] = ygasnew[1]
-mass_fractions['He'] = ygasnew[2]
-mass_fractions['H2O_HITEMP'] = ygasnew[7]
-mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
-mass_fractions['H2S'] = ygasnew[9]
-mass_fractions['Mg'] = ygasnew[5]
-mass_fractions['SiO'] = ygasnew[6]
-mass_fractions['Fe'] = ygasnew[8]
-mass_fractions['CO2'] = ygasnew[4]
-mass_fractions['CH4'] = ygasnew[3]
-mass_fractions['TiO_all_Exomol'] = ygasnew[10]
-mass_fractions['Al'] = ygasnew[11]
-
-
-MMW = 2.34 * np.ones_like(Parr)
-
-R_pl = pars.Rp
-gravity = pars.g
-P0 = 1e-4
-R_star = pars.R_star    # in Jupiter radius
-
-wavelength = nc.c/atmosphere.freq
-fconvert = 1e-3 * nc.c / wavelength**2 * 1e-4
-
-plt.figure(figsize=(12, 6))
-
-# calculate atmosphere without CO2
-mass_fractions['CO2'] = np.zeros_like(Parr)
-
-atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
-
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO2', alpha=0.6)
-
-# calculate atmosphere without CO
-mass_fractions['CO2'] = ygasnew[4]
-mass_fractions['CO_all_iso_HITEMP'] = np.zeros_like(Parr)
-
-atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
-
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO', alpha=0.6)
-
-# calculate atmosphere without H2O
-mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
-mass_fractions['H2O_HITEMP'] = np.zeros_like(Parr)
-
-atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
-
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2O', alpha=0.6)
-
-# calculate atmosphere without CH4
-mass_fractions['H2O_HITEMP'] = ygasnew[7]
-mass_fractions['CH4'] = np.zeros_like(Parr)
-
-atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
-
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CH4', alpha=0.6)
-
-# calculate atmosphere without H2S
-mass_fractions['CH4'] = ygasnew[3]
-mass_fractions['H2S'] = np.zeros_like(Parr)
-
-atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
-
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2S', alpha=0.6)
-
-# calculate clear atmosphere
-mass_fractions['H2S'] = ygasnew[9]
-
-atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl)
-
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='clear', linestyle='--')
-
-# calculate cloudy atmosphere
-# atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
-atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
-
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='cloudy', linewidth=3)
-
-plt.legend()
-plt.xscale('log')
-plt.xlabel('Wavelength (microns)')
-plt.ylabel(r'Planet flux $F_\nu$ (W m$^{-2}$ $\mu m^{-1}$)')
+# plot the tau_cloud = 1 surface
+plt.loglog(wlen, Ptau1, color='k')
 ax = plt.gca()
-# ax.set_xlim([2., 5.5])
-plt.savefig(savedir + 'spectrum.png', dpi=288)
+ax.invert_yaxis()
+ax.set_ylabel('Pressure (bar)')
+ax.set_xlabel(r'wavelength $\mu$m')
+ax.set_ylim([Parrbar[0], Parrbar[-1]])
+plt.savefig('tau1.png', dpi=288)
 plt.show()
 
 import os

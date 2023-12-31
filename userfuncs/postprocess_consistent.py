@@ -12,14 +12,17 @@ from petitRADTRANS import nat_cst as nc
 import sys
 sys.path.append('/home/helong/software/miniforge3/lib/python3.10/site-packages')
 import pyfastchem
-sys.path.append('../')
+sys.path.append('../../src')
 import read
 import constants as cnt
 import parameters as pars
 import functions as funs
 import itertools
 import pdb
+sys.path.append('../../util')
 from draw import myplot
+from calmeff import cal_eff_m_all, writelnk
+from calkappa import cal_opa_all
 
 def write_element(elementgrid):
     ''' Write the elemental abundance to input.dat '''
@@ -28,7 +31,7 @@ def write_element(elementgrid):
         for element, abundance in elementgrid.items():
             opt.write(element + ' ' + str(abundance) + '\n')
 
-chem = read.chemdata(pars.rdir + pars.gibbsfile)
+chem = read.chemdata(pars.gibbsfile)
 # other interesting species and their concentration
 extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
 extragascon = np.array([8e-3, 1, 0.33, 0, 0])
@@ -52,7 +55,7 @@ for i in range(len(extragas)):
 ncod = len(pars.solid)
 ngas = len(pars.gas)
 
-data = np.genfromtxt('../grid.txt', skip_header=1)
+data = np.genfromtxt('./grid' + pars.runname + '.txt', skip_header=1)
 data = data.T
 Parr = np.exp(data[0])
 Parrbar = Parr/1e6    # Parr should be in bar, rather than in cgs unit
@@ -65,6 +68,7 @@ xc = y0[:ncod]
 # xc = xc[[0, 1, 7, 9]]    # only choose cloud species that's included in petitRADTRANS
 xn = y0[-1]
 n_p = funs.cal_np(xn, cache.cachegrid)
+bs = xc / (xc.sum(axis=0) + xn)
 Tarr = cache.cachegrid.T_grid
 
 ygasnew = np.empty((len(gasmols), len(Parr)))
@@ -111,9 +115,12 @@ for j in range(len(Parr)):
         num = y0[i+ncod, j] / gasmol.mu
         for element in gasmol.element.keys():
             elementgrid[element] += num * gasmol.element[element]
+
+    # normalize the elemental abundance
+    totalnumber = np.sum(list(elementgrid.values()))
     # transfer to the log version
     for element, abundance in elementgrid.items():
-        elementgrid[element] = np.log10(abundance)+12
+        elementgrid[element] = np.log10(abundance/totalnumber)+12
 
     write_element(elementgrid)
     fastchem = pyfastchem.FastChem('./input.dat',
@@ -133,26 +140,33 @@ for j in range(len(Parr)):
 
 # plot the atmosphere after equilibrium chemistry calculation
 ynew = np.vstack((y0[:ncod], ygasnew[len(extragas):], y0[-1]))
-myplot(Parr, ynew, ncod, ngas, plotmode='all')
-pdb.set_trace()
+# myplot(Parr, ynew, ncod, ngas, plotmode='all')
+# pdb.set_trace()
 
 ####### calculate effective refractory index #######
+wlen = np.logspace(0, np.log10(20), 100)
+mmat = cal_eff_m_all(bs, pars.solid, wlen)
+writelnk(mmat, wlen, pars.rho_int, folder='meff')
+# pdb.set_trace()
 
 ####### calculate kappa #######
+opobj = cal_opa_all('meff', ap, write=False)
+kappadata = opobj['kext']/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
+pdb.set_trace()
 
 ####### Radiation transfer part #######
 # read the file containing kappa on each wavelength and pressure
-kappadata = np.empty((100, len(Parr)))
-for i in range(len(Parr)):
-    filename = f'../util/coeff/{i}.txt'
-    kappa = np.genfromtxt(filename, names=True)
-    kappadata[:, i] = kappa['kappa_ext']
+# kappadata = np.empty((100, len(Parr)))
+# for i in range(len(Parr)):
+#     filename = f'../util/coeff/{i}.txt'
+#     kappa = np.genfromtxt(filename, names=True)
+#     kappadata[:, i] = kappa['kappa_ext']
 
 # convert single particle extinction coefficient to total opacity
-kappadata = kappadata/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
+# kappadata = kappadata/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
 
 # calculate spline object
-spobj = RectBivariateSpline(kappa['wavelengthmicron'], Parrbar, kappadata)
+spobj = RectBivariateSpline(opobj['wlen'], Parrbar, kappadata)
 
 # cloud opacity function
 def cloud_opas(spobj):
@@ -170,7 +184,7 @@ def cloud_opas(spobj):
 linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
 # cloud_species = ['Mg2SiO4(c)_cm', 'MgSiO3(c)_cm', 'Fe(c)_cm', 'Al2O3(c)_cm']
 # atmosphere = Radtrans(line_species=linespecies, cloud_species=cloud_species, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [1, 20])
-atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [1, 20])
+atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [wlen[0], wlen[-1]])
 atmosphere.setup_opa_structure(Parrbar)
 
 mass_fractions = {}
@@ -268,6 +282,7 @@ plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label
 atmosphere.calc_transm(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, Pcloud=100, give_absorption_opacity=cloud_opas(spobj))
 
 plt.plot(nc.c/atmosphere.freq/1e-4, (atmosphere.transm_rad/R_star)**2*100, label='cloudy', color='k', linewidth=1.5)
+np.save(pars.runname + '.npy', (atmosphere.transm_rad/R_star)**2*100)
 
 plt.legend()
 plt.xscale('log')
@@ -280,7 +295,7 @@ x_left, x_right = ax.get_xlim()
 y_low, y_high = ax.get_ylim()
 #set aspect ratio
 # ax.set_aspect(abs((x_right-x_left)/(y_low-y_high))*0.02)
-plt.savefig('spectrumMg.png', dpi=288)
+plt.savefig('spectrum' + pars.runname + '.png', dpi=288)
 plt.show()
 
 import os

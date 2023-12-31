@@ -1,3 +1,4 @@
+runname = ''
 opa_IR = 0.3    # opacity in IR, cm^2 g^-1
 g = 2192        # gravitational acceleration, cm s^-1
 firr = 1 / 4    # radiation distribution
