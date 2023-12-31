@@ -1,6 +1,6 @@
 import numpy as np
 import constants as cnt
-import sys
+import sys, os
 
 # add path to /AtmCloud dir
 # (not tested thoroughly)
@@ -157,6 +157,23 @@ with open(parafilename, 'r') as ipt:
 
         # save the attr to pars class
         paralist[paraname] = value
+
+#check w/r optool is there...
+if 'calcoptical' in paralist and calcoptical:
+    if 'optooldir' not in paralist:
+        print('[parameters.py]:No >> optooldir << provided')
+        calcoptical = False
+    else:
+        try:
+            flist = os.listdir(optooldir)
+        except:
+            print(f'[parameters.py]:No valid dir for >> optooldir << ({optooldir}) provided')
+            calcoptical = False
+
+    if calcoptical:
+        if 'optool' not in flist or 'optool.py' not in flist:
+            print(f'[parameters.py]:optool tools not in {optooldir}')
+            calcoptical = False
 
 ## special treatment for parameters
 # special treatment for verbose

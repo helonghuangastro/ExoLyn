@@ -408,6 +408,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
         if pars.verboselevel==0:
             myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
 
+
 if __name__ == '__main__':
 
     init.set_rundir(sys.argv)
@@ -448,3 +449,6 @@ if __name__ == '__main__':
 
     if pars.writeoutputfile:
         output.writeatm(atmosphere.y, atmosphere.grid)
+
+    if pars.calcoptical:
+        print('[relaxation]:now continue with calculating the effective indices...')
