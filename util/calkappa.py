@@ -10,6 +10,7 @@ import parameters as pars
 import constants as cnt
 import read
 
+##TBA: /home/helong is not the same on my computer!
 sys.path.append('/home/helong/software/optool')
 import optool
 
@@ -26,12 +27,18 @@ def cal_opa(filename, ap, write=False, savefile=None):
 def cal_opa_all(folder, aparr, write=False):
     ''' calculate the opacity for all the wavelengths at all pressure '''
     N = len(aparr)
-    wlen = np.logspace(0, np.log10(20), 100)
+    Nlam = 100 #should become parameter
 
-    kabsmat = np.empty((100, N))
-    kscamat = np.empty((100, N))
-    kextmat = np.empty((100, N))
-    gscamat = np.empty((100, N))
+    #wavelength range in micron
+    wmin = 1.0 #micron -- should become a parameter
+    wmax = 20
+    #wlen = np.logspace(0, np.log10(20), Nlam) #This np.logspace is confusing...
+    wlen = 10**np.linspace(np.log10(wmin), np.log10(wmax), Nlam)
+
+    kabsmat = np.empty((Nlam, N))
+    kscamat = np.empty((Nlam, N))
+    kextmat = np.empty((Nlam, N))
+    gscamat = np.empty((Nlam, N))
 
     if write:
         if not os.path.exists('coeff'):
@@ -62,6 +69,7 @@ if __name__ == '__main__':
     atmosphere.update(data[1:])
 
     for i in range(atmosphere.N):
+        #CWO -- I'm confused by this
         p = optool.particle(f'~/software/optool/optool meff/{i}.lnk -p 0.25 -a {atmosphere.ap[i]*1e4} -l 1 20 100 -o coeff')
         with open(f'coeff/{i}.txt', 'w') as opt:
             opt.write('wavelength(micron) kappa_abs kappa_sca kappa_ext asymmetry_parameter\n')
