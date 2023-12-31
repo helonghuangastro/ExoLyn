@@ -15,6 +15,7 @@ import pdb
 import atmosphere_class
 import read
 import output
+import time
 
 # import the plot module
 if pars.verboselevel>-2 and pars.plotmode!='none':
@@ -361,6 +362,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
         ctrl: controlling class for convergence
         isplot: whether to plot the atmosphere profile after converging on each parameter
     '''
+    t1 = time.time()
     kwargs = {}
     for fpara_name in fparas:
         kwargs[fpara_name] = 0
@@ -408,6 +410,8 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
         if pars.verboselevel==0:
             myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
 
+    t2 = time.time()
+    return t2-t1
 
 if __name__ == '__main__':
 
@@ -442,7 +446,8 @@ if __name__ == '__main__':
 
     ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
 
-    iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
+    telap = iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
+    print(f'[relaxation]:iteration finished in {telap:.2f} seconds')
 
     if pars.verboselevel == -1:
         myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
