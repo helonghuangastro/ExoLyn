@@ -2,6 +2,13 @@ import numpy as np
 import constants as cnt
 import sys
 
+# add path to /AtmCloud dir
+# (not tested thoroughly)
+relcommand = sys.argv[0]
+ix = relcommand.index('src')
+rootdir = relcommand[:ix]
+
+
 def mygettype(valuestr):
     '''
     return the type of the parameter:
@@ -143,6 +150,10 @@ with open(parafilename, 'r') as ipt:
             value = getfloat(valuestr)
         else:
             value = valuestr.strip('\'')
+            #[23.12.31]this hack can be generalized later..
+            #i.e.: rootdir -> any
+            if '${rootdir}' in value:
+                value = value.replace('${rootdir}', rootdir)
 
         # save the attr to pars class
         paralist[paraname] = value
