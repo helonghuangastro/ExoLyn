@@ -97,9 +97,10 @@ def cal_eff_m_all (abundance, solid, wavelengthgrid):
     """
     mmat = np.empty((abundance.shape[1], len(wavelengthgrid)), dtype=complex)
     for i in range(abundance.shape[1]):
-        print(i)
+        print(f'\r[calmeff.cal_eff_m_all]:performing effective medium on particle {i}/{abundance.shape[1]}', end="")
         marr = cal_eff_m(abundance[:, i], solid, wavelengthgrid)
         mmat[i] = marr
+    print()
     return mmat
 
 def writelnk(mmat, wavelength, rho, folder='util/meff'):

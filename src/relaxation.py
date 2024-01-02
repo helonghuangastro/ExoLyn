@@ -455,7 +455,9 @@ if __name__ == '__main__':
     if pars.writeoutputfile:
         output.writeatm(atmosphere.y, atmosphere.grid)
 
+
     #calculation of optical constants (optional)
+    #first we check if we can do it
     if pars.calcoptical:
         import optical
         calcoptical, doptical = optical.prepare_optical (**pars.doptical)
@@ -464,8 +466,11 @@ if __name__ == '__main__':
     #we are all set
     if calcoptical:
         import calmeff, calkappa
-        print('[relaxation]:now continue with calculating the effective indices...')
+        print('[relaxation]:now continue with calculating the effective medium indices...')
         mmat = calmeff.cal_eff_m_all (atmosphere.bs, pars.solid, doptical['wavelengthgrid'])
         calmeff.writelnk(mmat, doptical['wavelengthgrid'], 2.8, folder=doptical['dirmeff'])
-        calkappa.cal_opa_all (doptical['dirkappa'], atmosphere.ap, write=True)
+
+        print('[relaxation]:using optool to calculate the opacities...')
+        calkappa.cal_opa_all (atmosphere.ap, write=True, **doptical)
+        print('[relaxation]:opacity data stored in ', doptical['dirkappa'])
 

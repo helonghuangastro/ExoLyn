@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 def prepare_optical (optooldir=None, wavelengthgrid=None, dirmeff=None, dirkappa=None):
     """
@@ -38,7 +39,7 @@ def prepare_optical (optooldir=None, wavelengthgrid=None, dirmeff=None, dirkappa
 
     if calcoptical:
         if dirkappa is None:
-            dirkappa = './meff' #the default dir by default
+            dirkappa = './coeff' #the default dir by default
 
         if not os.path.exists(dirkappa):
             try:
@@ -47,13 +48,16 @@ def prepare_optical (optooldir=None, wavelengthgrid=None, dirmeff=None, dirkappa
                 print(f'[optical.py]ERROR:creating dir >> dirkappa << ({dirkappa})')
                 calcoptical = False
 
+    if wavelengthgrid==None:
+        #default grid 0.5--10 micron
+        wavelengthgrid = 10**np.linspace(np.log10(0.5), np.log10(10.0), 100)
 
-    if type(wavelengthgrid)==str:
-        #read the wavelength grid from file TBD!
+    elif type(wavelengthgrid)==str:
+        #TBD read the wavelength grid from file 
         pass
 
 
     #perhaps not the most elegant solution
-    doptical = {'optooldir':optooldir, 'wavelengthgrid':wavelengthgrid, 'dirmeff':dirmeff}
+    doptical = {'optooldir':optooldir, 'wavelengthgrid':wavelengthgrid, 'dirmeff':dirmeff, 'dirkappa':dirkappa}
 
     return calcoptical, doptical

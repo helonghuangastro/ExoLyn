@@ -11,29 +11,54 @@ import constants as cnt
 import read
 
 ##TBA: /home/helong is not the same on my computer!
-sys.path.append('/home/helong/software/optool')
-import optool
 
-def cal_opa(filename, ap, write=False, savefile=None):
-    ''' ap is the particle size in cm '''
-    p = optool.particle('~/software/optool/optool ' + filename  + f' -p 0.25 -a {ap*1e4} -l 1 20 100 -o coeff')
+def cal_opa (filename, ap, Nlam, optooldir, dirkappa='./coeff', write=False, savefile=None):
+    ''' 
+    ap is the particle size in cm 
+    '''
+    sys.path.append(optooldir)
+    import optool
+
+    #command = optooldir+'/optool ' + filename  + f' -p 0.25 -a {ap*1e4} -l 1 20 100 -o {dirkappa}'
+    #command = optooldir+'/optool ' + filename  + f' -p 0.25 -a {ap*1e4} -l {filename} -o {dirkappa}'
+    #p = optool.particle(optooldir+'/optool ' + filename  + f' -p 0.25 -a {ap*1e4} -l 1 20 100 -o coeff')
+
+    ## CWO: I have changed the wavelength grid consistent with the .lnk file, which makes sense the most
+    ##      It is also possible to provide the particle file, e.g. "-a particles" it seems...
+    ##      Also, why do we have a porosity? "-p 0.25"?
+    ##      Can you check w/r the units are correct? (cm**2 /g?) or is it a cross section?!
+    ##      The standard output is very annoying -- any way to suppress it?
+    command = optooldir+f'/optool {filename} -p 0.25 -a {ap*1e4} -l {filename} -o {dirkappa}'
+    p = optool.particle(command)
+
     if write:
         with open('coeff/'+savefile, 'w') as opt:
-            opt.write('wavelength(micron) kappa_abs kappa_sca kappa_ext asymmetry_parameter\n')
-            for j in range(100):
-                opt.write(f'{p.lam[j]} {p.kabs[0,j]} {p.ksca[0,j]} {p.kext[0,j]} {p.gsca[0,j]}\n')
+            opt.write('#optical properties for particle ...\n')
+            opt.write('#cols::[wavelength,kappa_abs,kappa_sca,kappa_ext,asymmetry_parameter]\n')
+            opt.write('#colunits::[micron,cm2/g,cm2/g,cm2/g,]\n')
+            for j in range(Nlam):
+                sfmt = 5*'{:10.3e} '
+                line = sfmt.format(p.lam[j], p.kabs[0,j], p.ksca[0,j], p.kext[0,j], p.gsca[0,j])
+                opt.write(line+'\n')
+                #opt.write(f'{p.lam[j]} {p.kabs[0,j]} {p.ksca[0,j]} {p.kext[0,j]} {p.gsca[0,j]}\n')
     return p
 
-def cal_opa_all(folder, aparr, write=False):
+
+def cal_opa_all(aparr, write=False, Nlam=100, wavelengthgrid=None, 
+                optooldir='./', dirmeff='./meff', dirkappa='./coeff', **kwargs):
     ''' calculate the opacity for all the wavelengths at all pressure '''
     N = len(aparr)
-    Nlam = 100 #should become parameter
 
     #wavelength range in micron
     wmin = 1.0 #micron -- should become a parameter
     wmax = 20
     #wlen = np.logspace(0, np.log10(20), Nlam) #This np.logspace is confusing...
-    wlen = 10**np.linspace(np.log10(wmin), np.log10(wmax), Nlam)
+
+    if wavelengthgrid is None:
+        wlen = 10**np.linspace(np.log10(wmin), np.log10(wmax), Nlam)
+    else:
+        wlen = wavelengthgrid
+        Nlam = len(wlen)
 
     kabsmat = np.empty((Nlam, N))
     kscamat = np.empty((Nlam, N))
@@ -41,19 +66,26 @@ def cal_opa_all(folder, aparr, write=False):
     gscamat = np.empty((Nlam, N))
 
     if write:
-        if not os.path.exists('coeff'):
-            os.mkdir('coeff')
+        if not os.path.exists(dirkappa):
+            os.mkdir(dirkappa)
+
     for i in range(N):
-        p = cal_opa(folder+f'/{i}.lnk', aparr[i], write=write, savefile=f'{i}.txt')
+        p = cal_opa(dirmeff+f'/{i}.lnk', aparr[i], Nlam, optooldir, dirkappa, write=write, savefile=f'{i}.txt')
         kabsmat[:, i] = p.kabs[0]
         kscamat[:, i] = p.ksca[0]
         kextmat[:, i] = p.kext[0]
         gscamat[:, i] = p.gsca[0]
 
-    kappadata = {'wlen':wlen, 'kabs':kabsmat, 'ksca':kscamat, 'kext':kextmat, 'gsca':gscamat}
-    return kappadata
+    ## CWO: maybe only return when write is False?  
+    if write==False:
+        kappadata = {'wlen':wlen, 'kabs':kabsmat, 'ksca':kscamat, 'kext':kextmat, 'gsca':gscamat}
+        return kappadata
+
 
 if __name__ == '__main__':
+
+    optooldir = sys.path.append('/home/helong/software/optool')
+
     # read the data and calculate the particle size
     ngas = len(pars.gas)
     data = np.genfromtxt('../grid.txt', skip_header=1)
