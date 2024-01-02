@@ -86,17 +86,23 @@ def cal_eff_m(abundance, solid, wavelength):
 
     return marr
 
-def cal_eff_m_all (abundance, solid, wavelength):
-    mmat = np.empty((abundance.shape[1], len(wavelength)), dtype=complex)
+def cal_eff_m_all (abundance, solid, wavelengthgrid):
+    """
+    calculate effective medium optical constants:
+    - abundance:        :2d array of solid mass fractions (species-id, particle)     
+    - wavelengthgrid    :1d array of wavelength (micron)
+    - solid             :1d array giving the name for the solid species
+
+    in our case each particle corresponds to a single grid point
+    """
+    mmat = np.empty((abundance.shape[1], len(wavelengthgrid)), dtype=complex)
     for i in range(abundance.shape[1]):
         print(i)
-        marr = cal_eff_m(abundance[:, i], solid, wavelength)
+        marr = cal_eff_m(abundance[:, i], solid, wavelengthgrid)
         mmat[i] = marr
     return mmat
 
 def writelnk(mmat, wavelength, rho, folder='util/meff'):
-    if not os.path.exists(folder):
-        os.mkdir(folder)
     Nwlen = len(wavelength)
     for i in range(mmat.shape[0]):
         filename = folder + f'/{i}.lnk'
