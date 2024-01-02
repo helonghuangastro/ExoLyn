@@ -455,5 +455,18 @@ if __name__ == '__main__':
     if pars.writeoutputfile:
         output.writeatm(atmosphere.y, atmosphere.grid)
 
+    #calculation of optical constants (optional)
     if pars.calcoptical:
+        import optical
+        optical.prepare_optical (**pars.doptical)
+
+
+    if pars.calcoptical:
+        import calmeff, calkappa
         print('[relaxation]:now continue with calculating the effective indices...')
+        wav = np.array([1.0, 2.0, 5.0])
+        mmat = calmeff.cal_eff_m_all (atmosphere.bs, pars.solid, wav)
+        outputfolder = 'meff'
+        calmeff.writelnk(mmat,wav, 2.8, folder=outputfolder)
+        calkappa.cal_opa_all (outputfolder, atmosphere.ap, write=True)
+

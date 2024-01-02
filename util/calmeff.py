@@ -1,6 +1,7 @@
 import numpy as np
 import pdb
 import os
+import parameters as pars
 
 def preparepoly(marr, i):
     '''
@@ -85,7 +86,7 @@ def cal_eff_m(abundance, solid, wavelength):
 
     return marr
 
-def cal_eff_m_all(abundance, solid, wavelength):
+def cal_eff_m_all (abundance, solid, wavelength):
     mmat = np.empty((abundance.shape[1], len(wavelength)), dtype=complex)
     for i in range(abundance.shape[1]):
         print(i)
@@ -106,6 +107,7 @@ def writelnk(mmat, wavelength, rho, folder='util/meff'):
 
 # files containing the n-k data of species
 folder = '/home/helong/ARCiS/code/tables/nk/'
+folder = pars.rootdir+'tables/nk/'
 datadict = {'MgSiO3':'MgSiO3_amorph_sol-gel.dat', 'Mg2SiO4':'Mg2SiO4_amorph_sol-gel.dat',
             'SiO2':'SiO2_amorph.dat', 'MgO':'MgO.dat', 'FeO':'FeO.dat', 'FeS':'FeS.dat',
             'Fe2O3':'Fe2O3.dat', 'Fe':'Fe.dat', 'TiO2':'TiO2_anatase.dat', 'Al2O3':'Al2O3.dat',

@@ -19,6 +19,8 @@ def mygettype(valuestr):
     4 exp
     5 list
     '''
+    if valuestr.startswith('{'):
+        return 6
     if valuestr.startswith('['):
         return 5
     if valuestr.startswith('\''):
@@ -55,6 +57,7 @@ else:
 i1 = sys.argv[0].rfind('/')
 paralist['rdir'] = sys.argv[0][:i1+1]
 
+dictOpen = False
 with open(parafilename, 'r') as ipt:
     i = -1
     for line in ipt:
@@ -69,18 +72,26 @@ with open(parafilename, 'r') as ipt:
             line = line[:commentidx]    # remove comments
             line = line.strip()    # remove space
 
-        # load name-value pair
-        if line.count('=')!=1:
-            raise Exception(parafilename + ' line ' + str(i) + ': Should only have one \'=\' sign .')
-        equalsignidx = line.find('=')
-        paraname = line[:equalsignidx].strip()
-        valuestr = line[(equalsignidx+1):].strip()    # The value string of the line
+        if dictOpen and line[0]=='}':#dictionary will be closed
+            valuetype = 7
+        else:
+            # load name-value pair
+            if line.count('=')!=1:
+                raise Exception(parafilename + ' line ' + str(i) + ': Should only have one \'=\' sign .')
+            equalsignidx = line.find('=')
+            paraname = line[:equalsignidx].strip()
+            valuestr = line[(equalsignidx+1):].strip()    # The value string of the line
 
-        # get the type of the valuestring
-        valuetype = mygettype(valuestr)
+            # get the type of the valuestring
+            valuetype = mygettype(valuestr)
+
+        #dictionary
+        if valuetype==6:
+            nentries = 0
+            dictOpen = True
 
         # read list
-        if valuetype == 5:
+        elif valuetype == 5:
             valuestr = valuestr.strip('[').strip(']')
             valuelist = valuestr.split(', ')
             listtype = []
@@ -155,25 +166,21 @@ with open(parafilename, 'r') as ipt:
             if '${rootdir}' in value:
                 value = value.replace('${rootdir}', rootdir)
 
-        # save the attr to pars class
-        paralist[paraname] = value
+        #assign dictionary to paralist and close the dictionary
+        if valuetype==7:
+            paralist[dictname] = ddum
+            dictOpen = False
 
-#check w/r optool is there...
-if 'calcoptical' in paralist and calcoptical:
-    if 'optooldir' not in paralist:
-        print('[parameters.py]:No >> optooldir << provided')
-        calcoptical = False
-    else:
-        try:
-            flist = os.listdir(optooldir)
-        except:
-            print(f'[parameters.py]:No valid dir for >> optooldir << ({optooldir}) provided')
-            calcoptical = False
-
-    if calcoptical:
-        if 'optool' not in flist or 'optool.py' not in flist:
-            print(f'[parameters.py]:optool tools not in {optooldir}')
-            calcoptical = False
+        elif dictOpen:
+            if nentries==0:
+                dictname = paraname
+                ddum = dict()
+            else:
+                ddum[paraname] = value
+            nentries += 1
+        else:
+            # save the attr to pars class
+            paralist[paraname] = value
 
 ## special treatment for parameters
 # special treatment for verbose
