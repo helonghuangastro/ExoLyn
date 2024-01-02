@@ -333,7 +333,7 @@ def relaxation(efun, dedy, atmosphere, alpha=1, fixxn=False, **kwargs):
     # calculate partial derivative matrix
     # The following matrix is shown in Figure 17.3.1, numerical recipe
     dEdymat = dedy(atmosphere, **kwargs)
-    # pdb.set_trace()
+    pdb.set_trace()
 
     # Bmat is shown in Figure 17.3.1, numerical recipe
     Bmat = -Emat
@@ -424,7 +424,6 @@ if __name__ == '__main__':
     # find the boundary of the domain
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
 
-
     logP = np.log(Parr)
     dx = logP[1]-logP[0]
 
@@ -435,6 +434,7 @@ if __name__ == '__main__':
 
     y0 = init.init(atmosphere, method='Newton')
     atmosphere.update(y0)
+    # pdb.set_trace()
     # plot the initial state
     if pars.verboselevel >= 0:
         myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)

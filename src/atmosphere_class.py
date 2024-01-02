@@ -28,7 +28,10 @@ class atmosphere():
         return
 
     def update_property(self):
-        ''' update derived properties of the atmosphere '''
+        '''
+        update derived properties of the atmosphere
+        TBD: add mp here
+        '''
         ncond = self.ncond
         ngas = self.ngas
         y = self.y
@@ -40,10 +43,11 @@ class atmosphere():
         self.xvpos = np.maximum(self.xv, 0)    # physical (none-negative) xc to be used in certain places
         self.xnpos = np.maximum(self.xn, 0)
 
-        self.ap = funs.cal_ap(self.xcpos, self.xn)    # 20230706: xcpos -> xc
+        self.rho = (self.xcpos.sum(axis=0) + self.xn) / ((self.xcpos/np.atleast_2d(self.chem.rhosolid).T).sum(axis=0) + self.xn/pars.rho_int)    # internal density of each particle
+        self.ap = funs.cal_ap(self.xcpos, self.xn, self.rho)    # 20230706: xcpos -> xc
         self.np = funs.cal_np(self.xnpos, self.cachegrid)    # could be <0
-        self.bs = self.xcpos / (self.xcpos.sum(axis=0) + self.xn)
-        self.v_sed = funs.cal_vsed(self.ap, self.cachegrid)
+        self.bs = self.xcpos / (self.xcpos.sum(axis=0) + self.xn) * self.rho/np.atleast_2d(self.chem.rhosolid).T    # volume ratio of each species
+        self.v_sed = funs.cal_vsed(self.ap, self.rho, self.cachegrid)
 
         Sc2 = funs.cal_Sc_all(self.xv, self.ap, self.np, self.bs, self.chem, self.cachegrid)
         self.Sc = Sc2

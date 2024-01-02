@@ -61,11 +61,11 @@ suppresswarnings = 'all'
 Mg + SiO + 2H2O -> MgSiO3(s) + 2H2
 2Mg + SiO + 3H2O -> Mg2SiO4(s) + 3H2
 SiO + H2O -> SiO2(s) + H2
-#Mg + H2O -> MgO(s) + H2
-#Fe + H2O -> FeO(s) + H2
-#Fe + H2S -> FeS(s) + H2
-#2Fe + 3H2O -> Fe2O3(s) + 3H2
-#Fe -> Fe(s)
-#TiO + H2O -> TiO2(s) + H2
-#2Al + 3H2O -> Al2O3(s) + 3H2
+Mg + H2O -> MgO(s) + H2
+Fe + H2O -> FeO(s) + H2
+Fe + H2S -> FeS(s) + H2
+2Fe + 3H2O -> Fe2O3(s) + 3H2
+Fe -> Fe(s)
+TiO + H2O -> TiO2(s) + H2
+2Al + 3H2O -> Al2O3(s) + 3H2
 

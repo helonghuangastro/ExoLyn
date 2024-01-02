@@ -128,9 +128,9 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
         # calculate F (residual) for nuclei
         xc = murc * n
         xcpos = np.maximum(xc, 0)
-        ap = funs.cal_ap(xcpos, xn)
+        ap = funs.cal_ap(xcpos, xn, pars.rho_int)
         n_p = funs.cal_np(xn, cache)
-        t_coag = 1/funs.cal_t_coag_inv(ap, n_p, cache)
+        t_coag = 1/funs.cal_t_coag_inv(ap, pars.rho_int, n_p, cache)
         F = np.append(F, lnSn + np.log(t_coag) - np.log(xn*cache.rho_grid))
 
         if returnjac:
@@ -143,14 +143,14 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
             jac = np.vstack((jac, np.zeros(len(n)+1)))
 
             # calculate dt_coag/da numerically, then calculate dF[-1]/dn analytically
-            t_coag_new = 1/funs.cal_t_coag_inv(ap*1.001, n_p, cache)
+            t_coag_new = 1/funs.cal_t_coag_inv(ap*1.001, pars.rho_int, n_p, cache)
             dtda = (t_coag_new-t_coag) / (0.001*ap)
             jac[-1, :-1] = 1/t_coag * dtda / (4*np.pi*pars.rho_int*ap**2) * murc * pars.mn0 / xn
 
             xnnew = xn*1.001
-            ap = funs.cal_ap(xcpos, xnnew)
+            ap = funs.cal_ap(xcpos, xnnew, pars.rho_int)
             n_p = funs.cal_np(xnnew, cache)
-            t_coag_new = 1/funs.cal_t_coag_inv(ap, n_p, cache)
+            t_coag_new = 1/funs.cal_t_coag_inv(ap, pars.rho_int, n_p, cache)
             jac[-1, -1] = (np.log(t_coag_new) - np.log(t_coag)) / (0.001*xn) - 1/xn
 
         if returnjac:
@@ -240,7 +240,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
     # calculate hypothetical xn assuming very less condensation
     ap = np.cbrt(3*pars.mn0/(4*np.pi*pars.rho_int))
     Sn = cachegrid.Sn_grid
-    xn_tmp = np.sqrt(pars.mn0 * Sn / funs.cal_t_coag_inv(ap, 1, cachegrid)) / cachegrid.rho_grid
+    xn_tmp = np.sqrt(pars.mn0 * Sn / funs.cal_t_coag_inv(ap, pars.rho_int, 1, cachegrid)) / cachegrid.rho_grid
 
     # At this step preserve topidx and bottomidx, which is not as ugly as oversupersat parameter
     # loop over the cloud from upper down and try
