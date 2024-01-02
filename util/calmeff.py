@@ -17,13 +17,19 @@ def preparepoly(marr, i):
     polyidx = np.poly(rootarr)
     return polyidx
 
-def cal_eff_m(abundance, solid, wavelength):
+def cal_eff_m (abundance, solid, wavelength, mdataL):
+    """
+    CWO: Please say briefly what this function does
+    """
     # n+ik for each species
     mspecies = np.empty((len(wavelength), len(solid)), dtype=complex)
     # read the n-k data and interpolate
     for i, solidname in enumerate(solid):
-        filename = datadict[solidname]
-        mdata = np.genfromtxt(folder+filename)
+        #filename = datadict[solidname]
+        #mdata = np.genfromtxt(folder+filename)
+        mdata = mdataL[i]
+
+        ## CWO: what if the interpolation be out-of-bounds?
         n = np.interp(wavelength, mdata[:, 0], mdata[:, 1])
         k = np.interp(wavelength, mdata[:, 0], mdata[:, 2])
         mspecies[:, i].real = n
@@ -38,6 +44,9 @@ def cal_eff_m(abundance, solid, wavelength):
         mold = mspecies[k][sortidx[0]]
         # print(mold)
         # try to include everything at once. If that succeed, then no need to iterate
+
+        ## CWO: hard to follow what you're doing here... 
+        #       preparepoly is slow...
         polyidx = np.zeros(2*len(solid)+1, dtype=complex)
         for i in range(len(solid)):
             polyidx += preparepoly(mspecies[k], i) * abundance[i]
@@ -95,10 +104,18 @@ def cal_eff_m_all (abundance, solid, wavelengthgrid):
 
     in our case each particle corresponds to a single grid point
     """
+
+    ## CWO: maybe we can do this once
+    mdataL = []
+    for i, solidname in enumerate(solid):
+        filename = datadict[solidname]
+        mdata = np.genfromtxt(folder+filename)
+        mdataL.append(mdata)
+
     mmat = np.empty((abundance.shape[1], len(wavelengthgrid)), dtype=complex)
     for i in range(abundance.shape[1]):
         print(f'\r[calmeff.cal_eff_m_all]:performing effective medium on particle {i}/{abundance.shape[1]}', end="")
-        marr = cal_eff_m(abundance[:, i], solid, wavelengthgrid)
+        marr = cal_eff_m(abundance[:, i], solid, wavelengthgrid, mdataL)
         mmat[i] = marr
     print()
     return mmat
