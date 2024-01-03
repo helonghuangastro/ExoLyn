@@ -383,7 +383,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
             print('[relaxation.iterate]:conducted ', niter, ' iterations; exit status = ', ctrl.status)
             # plot if verbose='verbose'
             if pars.verboselevel >= 1:
-                myplot(Parr, atmospheren.y, ncond, ngas, plotmode=pars.plotmode)
+                myplot(Parr, atmospheren.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
             # successful case
             if ctrl.status==0:
                 atmosphere.update(yn)
@@ -408,7 +408,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
 
         print('[relaxation]SUCCESS: converged on >> ' + fpara_name +' <<')
         if pars.verboselevel==0:
-            myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
+            myplot(Parr, atmosphere.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
 
     t2 = time.time()
     return t2-t1
@@ -429,7 +429,6 @@ if __name__ == '__main__':
     # find the boundary of the domain
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
 
-
     logP = np.log(Parr)
     dx = logP[1]-logP[0]
 
@@ -440,9 +439,10 @@ if __name__ == '__main__':
 
     y0 = init.init(atmosphere, method='Newton')
     atmosphere.update(y0)
+    # pdb.set_trace()
     # plot the initial state
     if pars.verboselevel >= 0:
-        myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
+        myplot(Parr, atmosphere.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
 
     ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
 
@@ -450,7 +450,7 @@ if __name__ == '__main__':
     print(f'[relaxation]:iteration finished in {telap:.2f} seconds')
 
     if pars.verboselevel == -1:
-        myplot(Parr, atmosphere.y, ncond, ngas, plotmode=pars.plotmode)
+        myplot(Parr, atmosphere.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
 
     if pars.writeoutputfile:
         output.writeatm(atmosphere.y, atmosphere.grid)

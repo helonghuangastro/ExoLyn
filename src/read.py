@@ -21,6 +21,9 @@ class chemdata():
         self.solidindex = np.array([solidlist.index(reaction.solid) for reaction in self.reactions])
         self.gasst = np.array([reaction.gasst for reaction in self.reactions])    # gas stoichemics for all reactions
         pars.solid = solidlist
+        
+        self.rhosolid = self.readrho()
+        return
 
     def get_reaction(self, filename):
         reactions = []
@@ -98,6 +101,24 @@ class chemdata():
                 self.molecules[gasname] = mole
         return
 
+    def readrho(self):
+        rhofilename = pars.rdir + '../tables/density.txt'
+        densitydict = {}
+        # read the density file and get all the densities
+        with open(rhofilename, 'r') as ipt:
+            while(True):
+                line = ipt.readline()
+                if not line:
+                    break
+                if line.startswith('#'):
+                    continue
+                name, density = line.split(' ')
+                densitydict[name] = float(density)
+        
+        # the density of each solid species
+        rhosolid = np.array([densitydict[solid] for solid in pars.solid])
+        return rhosolid
+ 
 class reaction():
     def __init__(self, reactant, product, solid):
         self.reactant = reactant

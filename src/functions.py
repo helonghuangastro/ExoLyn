@@ -70,6 +70,8 @@ def E(atmosphere, **kwargs):
     xv = atmosphere.xv
     xn = atmosphere.xn
 
+    rhop = atmosphere.rho
+
     Tmid   = atmosphere.cachemid.T_grid
     rhomid = atmosphere.cachemid.rho_grid
     Tarr   = atmosphere.cachegrid.T_grid
@@ -93,7 +95,7 @@ def E(atmosphere, **kwargs):
     # error for xn
     ###CWO: I see this line also later... consider making it a function
     deltv = -0.5 * atmosphere.v_sed * fsed    # collision velocity due to sedimentation
-    t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.np, atmosphere.cachegrid, deltv)
+    t_coag_inv = cal_t_coag_inv(atmosphere.ap, rhop, atmosphere.np, atmosphere.cachegrid, deltv)
     exndif = edif(pref_dif, atmosphere.xn, dx) * fdif
     exnadv = eadv(pref_adv, atmosphere.xn, dx)
     exnsrc = get_exnsrc(pref_src, atmosphere.xn, atmosphere.cachegrid, t_coag_inv)
@@ -124,7 +126,7 @@ def E(atmosphere, **kwargs):
 
 def dEdy(atmosphere, **kwargs):
     '''
-    calculate Jacobian matrix, should return a (N-1, nvar, nvar) tensor.
+    calculate Jacobian matrix, should return a (N-1, nvar, 3*nvar) tensor.
     fixxn functionality is disabled in this version of code.
     '''
     fdif = kwargs['fdif']
@@ -155,11 +157,11 @@ def dEdy(atmosphere, **kwargs):
     v_sed0 = atmosphere.v_sed
     y0 = atmosphere.y
     dy = np.maximum(1e-15, np.abs(y0)*1e-3)
-    sedidx = np.append(np.arange(ncond), ncond+ngas)    # index that has an influence on the sedimentation (c and n)
+    sedidx = np.append(np.arange(ncond), ncond+ngas)    # index that has an influence on the sedimentation (xc and xn)
     for i in sedidx:
         ynew = y0.copy()
         ynew[i] += dy[i]
-        dvseddxc = cal_dvsed(ynew, cache_grid, v_sed0, atmosphere)/dy[i]
+        dvseddxc = cal_dvsed(ynew, cache_grid, v_sed0, atmosphere.chem.rhosolid)/dy[i]
         none_diag = dvseddxc * y0[sedidx] * cache_grid.rho_grid / dx * fsed    # non-diagonal terms
         J[1:, sedidx, nvar+i] += none_diag[:, 1:-1].T
         J[1:, sedidx, i] -= none_diag[:, :-2].T
@@ -174,7 +176,7 @@ def dEdy(atmosphere, **kwargs):
     econ = (atmosphere.Sc * pref_src)[:, :-1]    # no source term for the boundary condition
     econ[:, 0] = 0
     deltv = -0.5 * atmosphere.v_sed * fsed    # collision velocity due to sedimentation
-    t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.np, cache_grid, deltv)
+    t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.rho, atmosphere.np, cache_grid, deltv)
     exnsrc = get_exnsrc(pref_src, atmosphere.xn, cache_grid, t_coag_inv)
     exnsrc = np.insert(exnsrc, 0, 0)
 
@@ -186,10 +188,17 @@ def dEdy(atmosphere, **kwargs):
         desrcdy[i] = desrc/dy[i, :-1]
 
     # Analytically calculate dexnsrc/dxn
-    deltvnew = -0.5 * cal_vsed(atmosphere.ap*1.001, cache_grid) * fsed
-    t_coag_invnew = cal_t_coag_inv(atmosphere.ap*1.001, atmosphere.np, cache_grid, deltvnew)
-    dt_coag_invdap = (t_coag_invnew-t_coag_inv)/(1e-3*atmosphere.ap)
-    dexnsrcdxn = 2*t_coag_inv - 1/3*dt_coag_invdap * atmosphere.ap * (1-(pars.an/atmosphere.ap)**3)
+    ynew = y0.copy()
+    ynew[-1] += dy[-1]
+    xc = np.atleast_2d(ynew[:ncond])
+    xn = ynew[-1]
+    rhopnew = (xc.sum(axis=0) + xn) / ((xc/np.atleast_2d(atmosphere.chem.rhosolid).T).sum(axis=0) + xn/pars.rho_int)
+    apnew = cal_ap(xc, xn, rhopnew)
+    npnew = cal_np(xn, cache_grid)
+    deltvnew = -0.5 * cal_vsed(apnew, rhopnew, cache_grid) * fsed    # to be changed
+    t_coag_invnew = cal_t_coag_inv(apnew, rhopnew, npnew, cache_grid, deltvnew)
+    dt_coag_invdxn = (t_coag_invnew-t_coag_inv)/(dy[-1])
+    dexnsrcdxn = t_coag_inv + y0[-1]*dt_coag_invdxn
     dexnsrcdxn *= -pref_src * cache_grid.rho_grid
     dexnsrcdxn[0] = 0
     desrcdy[-1, -1] = dexnsrcdxn[:-1]
@@ -198,20 +207,21 @@ def dEdy(atmosphere, **kwargs):
 
     return J
 
-def cal_dvsed(y1, cache, v_sed0, atmosphere):
+def cal_dvsed(y1, cache, v_sed0, rhosolid):
     ncond = len(pars.solid)
-    ngas = len(pars.gas)
 
     xc = np.atleast_2d(y1[:ncond])
     xn = y1[-1]
     xcpos = np.maximum(xc, 0)
-    aparr = cal_ap(xcpos, xn)
-    v_sed1 = cal_vsed(aparr, cache)
+    rhop = (xcpos.sum(axis=0) + xn) / ((xcpos/np.atleast_2d(rhosolid).T).sum(axis=0) + xn/pars.rho_int)
+    aparr = cal_ap(xcpos, xn, rhop)
+    v_sed1 = cal_vsed(aparr, rhop, cache)
     dv_sed = v_sed1-v_sed0
     return dv_sed
 
 def dEdysrc(atmosphere, y1, pref_src, econ0, exnsrc0, **kwargs):
     reactions = atmosphere.chem.reactions
+    rhosolid = atmosphere.chem.rhosolid
 
     # calculate new exnsrc
     ncond = atmosphere.ncond
@@ -229,12 +239,13 @@ def dEdysrc(atmosphere, y1, pref_src, econ0, exnsrc0, **kwargs):
     rhoarr = cache_grid.rho_grid
     Snarr  = cache_grid.Sn_grid
 
-    aparr = cal_ap(xcpos, xn)
+    rhop = (xcpos.sum(axis=0) + xn) / ((xcpos/np.atleast_2d(rhosolid).T).sum(axis=0) + xn/pars.rho_int)
+    aparr = cal_ap(xcpos, xn, rhop)
     n_parr = cal_np(xn, cache_grid)    # could be <0
-    bs = xcpos / (xcpos.sum(axis=0) + xn)
-    v_sedarr = cal_vsed(aparr, cache_grid)
+    bs = xcpos / (xcpos.sum(axis=0) + xn) * rhop/np.atleast_2d(rhosolid).T
+    v_sedarr = cal_vsed(aparr, rhop, cache_grid)
     deltvarr = -0.5 * v_sedarr * kwargs['fsed']    # collision velocity due to sedimentation
-    t_coag_invarr = cal_t_coag_inv(aparr, n_parr, cache_grid, deltvarr)
+    t_coag_invarr = cal_t_coag_inv(aparr, rhop, n_parr, cache_grid, deltvarr)
     exnsrc = get_exnsrc(pref_src, xn, cache_grid, t_coag_invarr)
     exnsrc = np.insert(exnsrc, 0, 0)
 
@@ -338,7 +349,7 @@ def cal_np(xn, cache):
     n_parr = np.maximum(n_parr, 0)
     return n_parr
 
-def cal_ap(xc, xn):
+def cal_ap(xc, xn, rho):
     '''particle radius
     may need to think about when to set particle size to default size'''
     xctot = xc.sum(axis=0)
@@ -347,22 +358,26 @@ def cal_ap(xc, xn):
     # mp = np.array([mp])    # to be compatible with scalar input
     # mp[np.where((np.array([xn])<=0)|(np.array([xc1])+np.array([xc2])<=0))] = pars.mn0
     # mp = mp[0]
-    return np.cbrt(3*mp/(4*np.pi*pars.rho_int))
+    return np.cbrt(3*mp/(4*np.pi*rho))
 
-def cal_vsed(ap, cache):
+def cal_vsed(ap, rhop, cache):
     '''sedimentation velocity'''
     v_tharr = cache.v_th_grid
     rhoarr = cache.rho_grid
-    return -pars.g * ap * pars.rho_int / (v_tharr * rhoarr) * np.sqrt(1 + (4*ap/(9*cache.lmfp_grid))**2)    # the last term accounts for Stokes regime, smoothed the transition
+    return -pars.g * ap * rhop / (v_tharr * rhoarr) * np.sqrt(1 + (4*ap/(9*cache.lmfp_grid))**2)    # the last term accounts for Stokes regime, smoothed the transition
 
-def cal_t_coag_inv(ap, n_p, cache, deltv=0):
-    '''coagulation time scale, Eq. (12) in OrmelMin2019'''
+def cal_t_coag_inv(ap, rhop, n_p, cache, deltv=0):
+    '''
+    coagulation time scale, Eq. (12) in OrmelMin2019
+    Passing rhop to this function may not be the best choice. 
+    A better way is to pass mp, which will benefit the Jacobian calculation, allowing analytical evaluation.
+    '''
     Tarr = cache.T_grid
     lmfparr = cache.lmfp_grid
     v_tharr = cache.v_th_grid
     rhoarr = cache.rho_grid
 
-    mp = 4*np.pi/3 * pars.rho_int * ap**3
+    mp = 4*np.pi/3 * rhop * ap**3
     vBM = np.sqrt(16*cnt.kb*Tarr/(np.pi*mp))
     eta = 0.5 * lmfparr * v_tharr * rhoarr    # dynamic viscosity at p.5 of OrmelMin2019
     Dp = cnt.kb * Tarr / (6*np.pi * eta * ap)
