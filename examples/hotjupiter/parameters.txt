@@ -53,6 +53,10 @@ verbose = 'quiet'
 plotmode = 'all'
 writeoutputfile = True
 
+##optical constant calculations
+calcoptical = True              #w/r to calculate optical constants
+optooldir = '/home/helong/...'  #directory where "optool" is installed
+
 ##suppress warnings?
 #
 suppresswarnings = 'all'

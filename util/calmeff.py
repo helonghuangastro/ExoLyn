@@ -1,6 +1,7 @@
 import numpy as np
 import pdb
 import os
+import parameters as pars
 
 def preparepoly(marr, i):
     '''
@@ -16,13 +17,19 @@ def preparepoly(marr, i):
     polyidx = np.poly(rootarr)
     return polyidx
 
-def cal_eff_m(abundance, solid, wavelength):
+def cal_eff_m (abundance, solid, wavelength, mdataL):
+    """
+    CWO: Please say briefly what this function does
+    """
     # n+ik for each species
     mspecies = np.empty((len(wavelength), len(solid)), dtype=complex)
     # read the n-k data and interpolate
     for i, solidname in enumerate(solid):
-        filename = datadict[solidname]
-        mdata = np.genfromtxt(folder+filename)
+        #filename = datadict[solidname]
+        #mdata = np.genfromtxt(folder+filename)
+        mdata = mdataL[i]
+
+        ## CWO: what if the interpolation be out-of-bounds?
         n = np.interp(wavelength, mdata[:, 0], mdata[:, 1])
         k = np.interp(wavelength, mdata[:, 0], mdata[:, 2])
         mspecies[:, i].real = n
@@ -37,6 +44,9 @@ def cal_eff_m(abundance, solid, wavelength):
         mold = mspecies[k][sortidx[0]]
         # print(mold)
         # try to include everything at once. If that succeed, then no need to iterate
+
+        ## CWO: hard to follow what you're doing here... 
+        #       preparepoly is slow...
         polyidx = np.zeros(2*len(solid)+1, dtype=complex)
         for i in range(len(solid)):
             polyidx += preparepoly(mspecies[k], i) * abundance[i]
@@ -85,17 +95,32 @@ def cal_eff_m(abundance, solid, wavelength):
 
     return marr
 
-def cal_eff_m_all(abundance, solid, wavelength):
-    mmat = np.empty((abundance.shape[1], len(wavelength)), dtype=complex)
+def cal_eff_m_all (abundance, solid, wavelengthgrid):
+    """
+    calculate effective medium optical constants:
+    - abundance:        :2d array of solid mass fractions (species-id, particle)     
+    - wavelengthgrid    :1d array of wavelength (micron)
+    - solid             :1d array giving the name for the solid species
+
+    in our case each particle corresponds to a single grid point
+    """
+
+    ## CWO: maybe we can do this once
+    mdataL = []
+    for i, solidname in enumerate(solid):
+        filename = datadict[solidname]
+        mdata = np.genfromtxt(folder+filename)
+        mdataL.append(mdata)
+
+    mmat = np.empty((abundance.shape[1], len(wavelengthgrid)), dtype=complex)
     for i in range(abundance.shape[1]):
-        print(i)
-        marr = cal_eff_m(abundance[:, i], solid, wavelength)
+        print(f'\r[calmeff.cal_eff_m_all]:performing effective medium on particle {i}/{abundance.shape[1]}', end="")
+        marr = cal_eff_m(abundance[:, i], solid, wavelengthgrid, mdataL)
         mmat[i] = marr
+    print()
     return mmat
 
 def writelnk(mmat, wavelength, rho, folder='util/meff'):
-    if not os.path.exists(folder):
-        os.mkdir(folder)
     Nwlen = len(wavelength)
     for i in range(mmat.shape[0]):
         filename = folder + f'/{i}.lnk'
@@ -106,6 +131,7 @@ def writelnk(mmat, wavelength, rho, folder='util/meff'):
 
 # files containing the n-k data of species
 folder = '/home/helong/ARCiS/code/tables/nk/'
+folder = pars.rootdir+'tables/nk/'
 datadict = {'MgSiO3':'MgSiO3_amorph_sol-gel.dat', 'Mg2SiO4':'Mg2SiO4_amorph_sol-gel.dat',
             'SiO2':'SiO2_amorph.dat', 'MgO':'MgO.dat', 'FeO':'FeO.dat', 'FeS':'FeS.dat',
             'Fe2O3':'Fe2O3.dat', 'Fe':'Fe.dat', 'TiO2':'TiO2_anatase.dat', 'Al2O3':'Al2O3.dat',
