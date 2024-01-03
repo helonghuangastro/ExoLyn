@@ -14,7 +14,7 @@ cs_com = 8e-15  # combined cross section for vapor and H2, cm^2
 rho_int = 2.8   # particle internal density, g cm^-3
 an = 1e-7       # nucleation radius, cm
 mn0 = 4 / 3 * np.pi * rho_int * an ** 3    # nucleation mass, g
-nuc_pro = 1e-7 # (integrated) nuclei productio rate, g cm^-2 s^-1
+nuc_pro = 1e-15 # (integrated) nuclei productio rate, g cm^-2 s^-1
 sigma_nuc = 0.2 # width of the nucleation profile
 P_star = 60     # nucleation height, in cgs
 
@@ -50,8 +50,8 @@ verbose = 'quiet'
 # -- 'popup'    :draw to inspect
 # -- 'none'     :do nothing 
 
-plotmode = 'save'
-writeoutputfile = True
+plotmode = 'popup'
+writeoutputfile = False
 
 ##suppress warnings?
 #
