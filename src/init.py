@@ -110,7 +110,7 @@ def condnewtonold(Parr, reactions, cache, nu, muv, murc, xn):
 
     return nsolid
 
-def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
+def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid, xn0):
     '''
     Using Newton-Raphson method to calculate equilibrium concentration
     '''
@@ -121,36 +121,43 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
         '''
         xvleft = xvb - np.matmul(n, nu)*muv    # a vector with n_v length
         nulogxv = np.sum(nu * np.log(xvleft), axis=1) # a vector with xr length
-        xtot = xn + np.sum(n * murc)    # a scalar
-        logbs = np.log(n * murc / xtot)    # a scalar with xn length (now xn=xr)
+        xtot = xn + np.sum(n * murc/rhorel)    # a scalar
+        logbs = np.log(n * murc/rhorel / xtot)    # a scalar with xn length (now xn=xr)
         F = np.log(Sbase) + nulogxv - logbs
 
         # calculate F (residual) for nuclei
         xc = murc * n
         xcpos = np.maximum(xc, 0)
-        ap = funs.cal_ap(xcpos, xn, pars.rho_int)
+        rhop = (np.sum(xc)+xn)/(np.sum(xc/rhorel)+xn) * pars.rho_int
+        ap = funs.cal_ap(xcpos, xn, rhop)
         n_p = funs.cal_np(xn, cache)
-        t_coag = 1/funs.cal_t_coag_inv(ap, pars.rho_int, n_p, cache)
+        t_coag = 1/funs.cal_t_coag_inv(ap, rhop, n_p, cache)
         F = np.append(F, lnSn + np.log(t_coag) - np.log(xn*cache.rho_grid))
 
         if returnjac:
             # calculate Jacobian matrix
             jac1 = -np.matmul(nu, (nu*muv/xvleft).T)
-            jac2 = -np.eye(len(n))/n + murc/xtot
+            jac2 = -np.eye(len(n))/n + murc/rhorel/xtot
             jac = jac1 + jac2
             # add the last row and column (how change of the xn change the equations) to the Jacobian
             jac = np.hstack((jac, -np.ones((len(n),1))/xtot))
             jac = np.vstack((jac, np.zeros(len(n)+1)))
 
-            # calculate dt_coag/da numerically, then calculate dF[-1]/dn analytically
-            t_coag_new = 1/funs.cal_t_coag_inv(ap*1.001, pars.rho_int, n_p, cache)
-            dtda = (t_coag_new-t_coag) / (0.001*ap)
-            jac[-1, :-1] = 1/t_coag * dtda / (4*np.pi*pars.rho_int*ap**2) * murc * pars.mn0 / xn
+            # calculate dt_coag/dxi numerically
+            for i in range(len(n)):
+                xcnew = xcpos.copy()
+                xcnew[i] *= 1.001
+                rhopnew = (np.sum(xcnew)+xn)/(np.sum(xcnew/rhorel)+xn) * pars.rho_int
+                apnew = funs.cal_ap(xcnew, xn, rhopnew)
+                t_coag_new = 1/funs.cal_t_coag_inv(apnew, rhopnew, n_p, cache)
+                jac[-1, i] = (np.log(t_coag_new) - np.log(t_coag)) / (0.001*xcpos[i])*murc[i]
 
+            # calculate dt_coag/da numerically, then calculate dF[-1]/dn analytically
             xnnew = xn*1.001
-            ap = funs.cal_ap(xcpos, xnnew, pars.rho_int)
+            rhopnew = (np.sum(xcpos)+xnnew)/(np.sum(xcpos/rhorel)+xnnew) * pars.rho_int
+            ap = funs.cal_ap(xcpos, xnnew, rhopnew)
             n_p = funs.cal_np(xnnew, cache)
-            t_coag_new = 1/funs.cal_t_coag_inv(ap, pars.rho_int, n_p, cache)
+            t_coag_new = 1/funs.cal_t_coag_inv(ap, rhopnew, n_p, cache)
             jac[-1, -1] = (np.log(t_coag_new) - np.log(t_coag)) / (0.001*xn) - 1/xn
 
         if returnjac:
@@ -223,6 +230,8 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, xn0):
                 break
 
         return flagsingle, np.append(n, xn)
+
+    rhorel = rhosolid/pars.rho_int
 
     xvb = pars.xvb
     nsolid = np.zeros((len(reactions), len(Parr)))
@@ -337,6 +346,7 @@ def init(atmosphere, method):
     ngas = atmosphere.ngas
     dx = atmosphere.dx
     reactions = atmosphere.chem.reactions
+    rhosolid = atmosphere.chem.rhosolid
 
     # prepare chemistry things
     nu = []
@@ -369,7 +379,7 @@ def init(atmosphere, method):
         nsolid = condscipy(Parr, reactions, cache, nu, muv, murc, y0[-1])
     if method=='Newton':
         # My Newton method to calculate the equilibrium concentration of solids.
-        nsolid, xn = condnewton(Parr, reactions, atmosphere.cachegrid, nu, muv, murc, y0[-1])
+        nsolid, xn = condnewton(Parr, reactions, atmosphere.cachegrid, nu, muv, murc, rhosolid, y0[-1])
     elif method=='half':
         nsolid = condbis(Parr, reactions, cache, nu, muv)
     elif method=='gold':

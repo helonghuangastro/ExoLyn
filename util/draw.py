@@ -70,9 +70,9 @@ def myplot_v2(Parr, y0, ncod, ngas, save=0):
 
     return
 
-def myplot(Parr, y0, ncod, ngas, plotmode=0, **kwargs):
+def myplot(Parr, y0, rhop, ncod, ngas, plotmode=0, **kwargs):
     '''plot the solid and gas concentrations'''
-    s = funs.cal_ap(y0[:ncod], y0[-1])
+    s = funs.cal_ap(y0[:ncod], y0[-1], rhop)
 
     ax = plt.gca()
     axs = ax.twiny()

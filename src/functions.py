@@ -198,7 +198,7 @@ def dEdy(atmosphere, **kwargs):
     deltvnew = -0.5 * cal_vsed(apnew, rhopnew, cache_grid) * fsed    # to be changed
     t_coag_invnew = cal_t_coag_inv(apnew, rhopnew, npnew, cache_grid, deltvnew)
     dt_coag_invdxn = (t_coag_invnew-t_coag_inv)/(dy[-1])
-    dexnsrcdxn = t_coag_inv - y0[-1]*dt_coag_invdxn
+    dexnsrcdxn = t_coag_inv + y0[-1]*dt_coag_invdxn
     dexnsrcdxn *= -pref_src * cache_grid.rho_grid
     dexnsrcdxn[0] = 0
     desrcdy[-1, -1] = dexnsrcdxn[:-1]
@@ -367,7 +367,11 @@ def cal_vsed(ap, rhop, cache):
     return -pars.g * ap * rhop / (v_tharr * rhoarr) * np.sqrt(1 + (4*ap/(9*cache.lmfp_grid))**2)    # the last term accounts for Stokes regime, smoothed the transition
 
 def cal_t_coag_inv(ap, rhop, n_p, cache, deltv=0):
-    '''coagulation time scale, Eq. (12) in OrmelMin2019'''
+    '''
+    coagulation time scale, Eq. (12) in OrmelMin2019
+    Passing rhop to this function may not be the best choice. 
+    A better way is to pass mp, which will benefit the Jacobian calculation, allowing analytical evaluation.
+    '''
     Tarr = cache.T_grid
     lmfparr = cache.lmfp_grid
     v_tharr = cache.v_th_grid
