@@ -28,8 +28,8 @@ def cal_opa (filename, ap, Nlam, optooldir, dirkappa='./coeff', write=False, sav
     ##      Also, why do we have a porosity? "-p 0.25"?
     ##      Can you check w/r the units are correct? (cm**2 /g?) or is it a cross section?!
     ##      The standard output is very annoying -- any way to suppress it?
-    command = optooldir+f'/optool {filename} -p 0.25 -a {ap*1e4} -l {filename} -o {dirkappa}'
-    p = optool.particle(command)
+    command = optooldir+f'/optool {filename} -q -p 0.25 -a {ap*1e4} -l {filename} -o {dirkappa}'
+    p = optool.particle(command, silent=True)
 
     if write:
         with open('coeff/'+savefile, 'w') as opt:
@@ -70,11 +70,13 @@ def cal_opa_all(aparr, write=False, Nlam=100, wavelengthgrid=None,
             os.mkdir(dirkappa)
 
     for i in range(N):
+        print(f'\r[calmeff.cal_opa_all]:running optool on particle {i}/{N}', end="")
         p = cal_opa(dirmeff+f'/{i}.lnk', aparr[i], Nlam, optooldir, dirkappa, write=write, savefile=f'{i}.txt')
         kabsmat[:, i] = p.kabs[0]
         kscamat[:, i] = p.ksca[0]
         kextmat[:, i] = p.kext[0]
         gscamat[:, i] = p.gsca[0]
+    print()
 
     ## CWO: maybe only return when write is False?  
     if write==False:
