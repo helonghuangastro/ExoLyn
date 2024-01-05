@@ -9,32 +9,20 @@ def preparepoly(marr, i):
     marr: complex array of refractory indices
     '''
     N = len(marr)
-    rootarr = np.empty(2*N, dtype=complex)
-    rootarr[:N] = marr/np.sqrt(2)*1.0j
-    rootarr[N:] = -rootarr[:N]
-    rootarr[i] = marr[i]
-    rootarr[N+i] = -marr[i]
-    polyidx = np.poly(rootarr)
+
+    rootarr = np.empty(N, dtype=complex)
+    rootarr = -marr**2/2
+    rootarr[i] = marr[i]**2
+    polyidxy = np.poly(rootarr)
+    polyidx = np.zeros(2*N+1, dtype=complex)
+    polyidx[::2] = polyidxy
+
     return polyidx
 
-def cal_eff_m (abundance, solid, wavelength, mdataL):
+def cal_eff_m (abundance, solid, wavelength, mspecies, polyidxmat):
     """
     CWO: Please say briefly what this function does
     """
-    # n+ik for each species
-    mspecies = np.empty((len(wavelength), len(solid)), dtype=complex)
-    # read the n-k data and interpolate
-    for i, solidname in enumerate(solid):
-        #filename = datadict[solidname]
-        #mdata = np.genfromtxt(folder+filename)
-        mdata = mdataL[i]
-
-        ## CWO: what if the interpolation be out-of-bounds?
-        n = np.interp(wavelength, mdata[:, 0], mdata[:, 1])
-        k = np.interp(wavelength, mdata[:, 0], mdata[:, 2])
-        mspecies[:, i].real = n
-        mspecies[:, i].imag = k
-
     sortidx = np.argsort(-abundance)    # rank from large to small
 
     marr = np.empty(len(wavelength), dtype=complex)
@@ -47,9 +35,7 @@ def cal_eff_m (abundance, solid, wavelength, mdataL):
 
         ## CWO: hard to follow what you're doing here... 
         #       preparepoly is slow...
-        polyidx = np.zeros(2*len(solid)+1, dtype=complex)
-        for i in range(len(solid)):
-            polyidx += preparepoly(mspecies[k], i) * abundance[i]
+        polyidx = np.matmul(polyidxmat[k], abundance)
         allroots = np.roots(polyidx)
         physicalidx = np.where((allroots.real>0)&(allroots.imag>0))[0]    # physical solution for the refractory index.
         if len(physicalidx)==1:
@@ -58,6 +44,7 @@ def cal_eff_m (abundance, solid, wavelength, mdataL):
 
         # find the polynomial index of the equation, with a new species
         for n in range(2, len(solid)+1):
+            print('Warning!')
             # polynomial index only inluding previous species
             polyidxold = np.zeros(2*n+1, dtype=complex)
             for i in range(n-1):
@@ -105,6 +92,9 @@ def cal_eff_m_all (abundance, solid, wavelengthgrid):
     in our case each particle corresponds to a single grid point
     """
 
+    Nwlen = len(wavelengthgrid)
+    Nsolid = len(solid)
+
     ## CWO: maybe we can do this once
     mdataL = []
     for i, solidname in enumerate(solid):
@@ -112,10 +102,30 @@ def cal_eff_m_all (abundance, solid, wavelengthgrid):
         mdata = np.genfromtxt(folder+filename)
         mdataL.append(mdata)
 
-    mmat = np.empty((abundance.shape[1], len(wavelengthgrid)), dtype=complex)
+    # n+ik for each species
+    mspecies = np.empty((Nwlen, Nsolid), dtype=complex)
+    # read the n-k data and interpolate
+    for i, solidname in enumerate(solid):
+        #filename = datadict[solidname]
+        #mdata = np.genfromtxt(folder+filename)
+        mdata = mdataL[i]
+
+        ## CWO: what if the interpolation be out-of-bounds?
+        n = np.interp(wavelengthgrid, mdata[:, 0], mdata[:, 1])
+        k = np.interp(wavelengthgrid, mdata[:, 0], mdata[:, 2])
+        mspecies[:, i].real = n
+        mspecies[:, i].imag = k
+
+    ##### prepare the polyindex ahead of time #####
+    polyidxmat = np.empty([Nwlen, 2*Nsolid+1, Nsolid], dtype=complex)
+    for i in range(Nwlen):
+        for j in range(Nsolid):
+            polyidxmat[i, :, j] = preparepoly(mspecies[i], j)
+
+    mmat = np.empty((abundance.shape[1], Nwlen), dtype=complex)
     for i in range(abundance.shape[1]):
         print(f'\r[calmeff.cal_eff_m_all]:performing effective medium on particle {i}/{abundance.shape[1]}', end="")
-        marr = cal_eff_m(abundance[:, i], solid, wavelengthgrid, mdataL)
+        marr = cal_eff_m(abundance[:, i], solid, wavelengthgrid, mspecies, polyidxmat)
         mmat[i] = marr
     print()
     return mmat
