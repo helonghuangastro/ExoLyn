@@ -135,7 +135,7 @@ def writelnk(mmat, wavelength, rho, folder='util/meff'):
     for i in range(mmat.shape[0]):
         filename = folder + f'/{i}.lnk'
         with open(filename, 'w') as opt:
-            opt.write(f'{Nwlen} {rho}\n')
+            opt.write(f'{Nwlen} {rho[i]}\n')
             for j in range(Nwlen):
                 opt.write(f'{wavelength[j]} {mmat[i,j].real} {mmat[i,j].imag}\n')
 
@@ -145,7 +145,7 @@ folder = pars.rootdir+'tables/nk/'
 datadict = {'MgSiO3':'MgSiO3_amorph_sol-gel.dat', 'Mg2SiO4':'Mg2SiO4_amorph_sol-gel.dat',
             'SiO2':'SiO2_amorph.dat', 'MgO':'MgO.dat', 'FeO':'FeO.dat', 'FeS':'FeS.dat',
             'Fe2O3':'Fe2O3.dat', 'Fe':'Fe.dat', 'TiO2':'TiO2_anatase.dat', 'Al2O3':'Al2O3.dat',
-            'KCl':'KCl.dat', 'NaCl':'NaCl.dat'}
+            'KCl':'KCl.dat', 'NaCl':'NaCl.dat', 'ZnS':'ZnS.dat'}
 files = datadict.values()
 
 # wavelength (micron) of interest

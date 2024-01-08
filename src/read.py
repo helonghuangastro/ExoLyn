@@ -102,7 +102,7 @@ class chemdata():
         return
 
     def readrho(self):
-        rhofilename = pars.rdir + '../tables/density.txt'
+        rhofilename = pars.rootdir + '/tables/density.txt'
         densitydict = {}
         # read the density file and get all the densities
         with open(rhofilename, 'r') as ipt:
@@ -214,4 +214,4 @@ def get_mole(moleterm):
         st = int(moleterm[:i])
     return st, molename
 
-element_data = {'H':1, 'He':4, 'C':12, 'N':14, 'O':16, 'Na':23, 'Mg':24, 'Al':27, 'Si':28, 'S':32, 'Cl':35.5, 'K':39, 'Ca':40, 'Ti':48, 'Cr':52, 'Mn':55, 'Fe':56}    # all element data 
+element_data = {'H':1, 'He':4, 'C':12, 'N':14, 'O':16, 'Na':23, 'Mg':24, 'Al':27, 'Si':28, 'S':32, 'Cl':35.5, 'K':39, 'Ca':40, 'Ti':48, 'Cr':52, 'Mn':55, 'Fe':56, 'Zn':65}    # all element data 
