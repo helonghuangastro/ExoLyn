@@ -131,6 +131,11 @@ def cal_eff_m_all (abundance, solid, wavelengthgrid):
     return mmat
 
 def writelnk(mmat, wavelength, rho, folder='util/meff'):
+
+    # create folder is it doesn't exist
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+
     Nwlen = len(wavelength)
     for i in range(mmat.shape[0]):
         filename = folder + f'/{i}.lnk'

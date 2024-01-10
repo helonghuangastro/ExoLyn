@@ -62,13 +62,13 @@ Parrbar = Parr/1e6    # Parr should be in bar, rather than in cgs unit
 y0 = data[1:]
 cache = funs.init_cache(Parr, chem)
 # prepare for the radiation transfer
-ap = funs.cal_ap(y0[:ncod], y0[-1])
-ap[-1] = ap[-2]
 xc = y0[:ncod]
-# xc = xc[[0, 1, 7, 9]]    # only choose cloud species that's included in petitRADTRANS
 xn = y0[-1]
+rhop = (xc.sum(axis=0) + xn) / ((xc/np.atleast_2d(chem.rhosolid).T).sum(axis=0) + xn/pars.rho_int)
+ap = funs.cal_ap(y0[:ncod], y0[-1], rhop)
+ap[-1] = ap[-2]
 n_p = funs.cal_np(xn, cache.cachegrid)
-bs = xc / (xc.sum(axis=0) + xn)
+bs = xc / (xc.sum(axis=0) + xn) * rhop/np.atleast_2d(chem.rhosolid).T
 Tarr = cache.cachegrid.T_grid
 
 ygasnew = np.empty((len(gasmols), len(Parr)))
@@ -146,13 +146,13 @@ ynew = np.vstack((y0[:ncod], ygasnew[len(extragas):], y0[-1]))
 ####### calculate effective refractory index #######
 wlen = np.logspace(0, np.log10(20), 100)
 mmat = cal_eff_m_all(bs, pars.solid, wlen)
-writelnk(mmat, wlen, pars.rho_int, folder='meff')
+writelnk(mmat, wlen, rhop, folder='meff')
 # pdb.set_trace()
 
 ####### calculate kappa #######
-opobj = cal_opa_all('meff', ap, write=False)
+opobj = cal_opa_all(ap, write=False, Nlam=len(wlen), optooldir='/home/helong/software/optool')
 kappadata = opobj['kext']/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
-pdb.set_trace()
+# pdb.set_trace()
 
 ####### Radiation transfer part #######
 # read the file containing kappa on each wavelength and pressure
