@@ -1,9 +1,53 @@
-runname = ''
-opa_IR = 0.3    # opacity in IR, cm^2 g^-1
+# stellar and planet basic parameters
+T_star = 5778    # stellar temperature, K
+R_star = cnt.R_sun  # stellar radius, cm
+
+Rp = 1.087 * cnt.Rj # planet radius, cm
+rp = 0.05 * cnt.au  # planet orbital radius, cm
 g = 2192        # gravitational acceleration, cm s^-1
+
+
+# simulation control parameters
+runname = ''
+gibbsfile = '../../tables/gibbs.txt'
+##suppress warnings?
+suppresswarnings = 'all'
+
+
+# plot and output
+# verbose level of plot
+## choose one of [silent,quiet,default,verbose] 
+# -- 'silent'= no pop-up figure; 
+# -- 'quiet'= only draw at the end; 
+# -- 'default'= plot once finished converging fpara; 
+# -- 'verbose'= plot for every fpara value
+verbose = 'quiet'
+# plot behavior
+##choose w/r to show and/or save intermediate files.
+# -- 'all'      :do all of the below
+# -- 'save'     :save intermediate data to png file
+# -- 'popup'    :draw to inspect
+# -- 'none'     :do nothing 
+plotmode = 'all'
+writeoutputfile = True    # output file setting
+
+
+# simulation settings
+N = 700
+Pa = 1.         # pressure at the upper limit of atmosphere, in cgs units
+Pb = 1e7        # pressure at the lower limit of atmosphere, in cgs units
+Pref = 1e6      # reference pressure at which the gibbs energy is measured
+autoboundary = True     # whether or not adjust the lower boundary automatically
+
+
+# T-P profile settings
+opa_IR = 0.3    # opacity in IR, cm^2 g^-1
 firr = 1 / 4    # radiation distribution
 opa_vis_IR = 0.158    # opacity ratio between visual and IR
 T_int = 500     # interior temperature, K
+
+
+# other uncertainties in the cloud model
 mgas = 2.34 * cnt.mu    # gas molecular weight, g
 Kzz = 1e8       # diffusion, cm^2s^-1
 Kp = 1e8        # particle diffusivity, cm^2s^-1
@@ -18,51 +62,18 @@ nuc_pro = 1e-15 # (integrated) nuclei productio rate, g cm^-2 s^-1
 sigma_nuc = 0.2 # width of the nucleation profile
 P_star = 60     # nucleation height, in cgs
 
+
+# chemical settings
 gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
 xvb = [7.56e-4, 1.32e-3, 1e-3, 1e-3, 8e-4, 1e-5, 7e-5]
-gibbsfile = '../../tables/gibbs.txt'
-
-T_star = 5778    # stellar temperature, K
-R_star = cnt.R_sun  # stellar radius, cm
-
-Rp = 1.087 * cnt.Rj # planet radius, cm
-rp = 0.05 * cnt.au  # planet orbital radius, cm
-
-N = 700
-Pa = 1.         # pressure at the upper limit of atmosphere, in cgs units
-Pb = 1e7        # pressure at the lower limit of atmosphere, in cgs units
-Pref = 1e6      # reference pressure at which the gibbs energy is measured
-
-autoboundary = True     # whether or not adjust the lower boundary automatically
-
-## choose one of [silent,quiet,default,verbose] 
-# -- 'silent'= no pop-up figure; 
-# -- 'quiet'= only draw at the end; 
-# -- 'default'= plot once finished converging fpara; 
-# -- 'verbose'= plot for every fpara value
-
-verbose = 'quiet'     
 
 
-##choose w/r to show and/or save intermediate files.
-# -- 'all'      :do all of the below
-# -- 'save'     :save intermediate data to png file
-# -- 'popup'    :draw to inspect
-# -- 'none'     :do nothing 
-
-plotmode = 'all'
-writeoutputfile = True
-
-##optical constant calculations
+# optical constant calculations
 calcoptical = True              #w/r to calculate optical constants
 optooldir = '/home/helong/...'  #directory where "optool" is installed
 doptical = {
 optooldir='/home/helong/software/optool/'
 }
-
-##suppress warnings?
-#
-suppresswarnings = 'all'
 
 ============ put reactions here =============
 Mg + SiO + 2H2O -> MgSiO3(s) + 2H2

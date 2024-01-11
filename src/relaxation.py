@@ -453,7 +453,7 @@ if __name__ == '__main__':
         myplot(Parr, atmosphere.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
 
     if pars.writeoutputfile:
-        output.writeatm(atmosphere.y, atmosphere.grid)
+        output.writeatm(atmosphere)
 
 
     #calculation of optical constants (optional)
@@ -468,7 +468,7 @@ if __name__ == '__main__':
         import calmeff, calkappa
         print('[relaxation]:now continue with calculating the effective medium indices...')
         mmat = calmeff.cal_eff_m_all (atmosphere.bs, pars.solid, doptical['wavelengthgrid'])
-        calmeff.writelnk(mmat, doptical['wavelengthgrid'], 2.8, folder=doptical['dirmeff'])
+        calmeff.writelnk(mmat, doptical['wavelengthgrid'], atmosphere.rho, folder=doptical['dirmeff'])
 
         print('[relaxation]:using optool to calculate the opacities...')
         calkappa.cal_opa_all (atmosphere.ap, write=True, **doptical)
