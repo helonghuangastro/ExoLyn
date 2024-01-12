@@ -8,7 +8,7 @@ import atmosphere_class
 import functions as funs
 import parameters as pars
 import constants as cnt
-import read
+import chemistry
 
 ##TBA: /home/helong is not the same on my computer!
 
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     Parrbar = Parr/1e6
     logP = np.log(Parr)
 
-    chem = read.chemdata('../' + pars.gibbsfile)
+    chem = chemistry.chemdata('../' + pars.gibbsfile)
     cache = funs.init_cache(Parr, chem)
     atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)
 

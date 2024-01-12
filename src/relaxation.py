@@ -13,7 +13,7 @@ from fmatrixsol import matrixsol
 import init
 import pdb
 import atmosphere_class
-import read
+import chemistry
 import output
 import time
 
@@ -423,8 +423,8 @@ if __name__ == '__main__':
         import warnings
         warnings.filterwarnings('ignore')
 
-    # read in all the chemistry data
-    chem = read.chemdata(pars.gibbsfile)
+    # chemistry in all the chemistry data
+    chem = chemistry.chemdata(pars.gibbsfile)
 
     # find the boundary of the domain
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
@@ -432,7 +432,7 @@ if __name__ == '__main__':
     logP = np.log(Parr)
     dx = logP[1]-logP[0]
 
-    atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere that has already been converged
+    atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere that has alchemistryy been converged
     atmospheren = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere class used in each iteration
     ncond = atmosphere.ncond
     ngas = atmosphere.ngas
