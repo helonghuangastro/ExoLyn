@@ -9,7 +9,8 @@ g = 2192        # gravitational acceleration, cm s^-1
 
 # simulation control parameters
 runname = ''
-gibbsfile = '../../tables/gibbs.txt'
+rootdir = '../../'    # the root directory of the cloud model
+gibbsfile = rootdir + 'tables/gibbs.txt'
 ##suppress warnings?
 suppresswarnings = 'all'
 

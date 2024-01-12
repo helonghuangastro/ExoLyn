@@ -38,7 +38,10 @@ def getfloat(valuestr):
     '''
     get a float from a string, compatible with constant.py and numpy
     '''
-    if 'cnt.' in valuestr:
+    valuetype = mygettype(valuestr)
+    if valuetype == 3:
+        value = valuestr.strip('\'')
+    elif 'cnt.' in valuestr:
         value = getattr(cnt, valuestr[4:])
     elif 'np.' in valuestr:
         value = getattr(np, valuestr[3:])
@@ -97,7 +100,7 @@ with open(parafilename, 'r') as ipt:
             listtype = []
             for singlevalue in valuelist:
                 listtype.append(mygettype(singlevalue))
-            if listtype.count(listtype[0]) != len(listtype):
+            if len(set(listtype)) != 1:
                 raise Exception(parafilename + ' line ' + str(i) + ': List should have the same type')
             # read value of each element
             value = []
@@ -117,13 +120,12 @@ with open(parafilename, 'r') as ipt:
                 value = np.array(value)
 
         # evaluate the value
-        # TBD: also including +, - and be compatible with string manipulation
-        # Only compatible with *, /, **
+        # Only compatible with +, -, *, /, **. No '( )' supported.
         elif valuetype == 4:
             valuelist = valuestr.split(' ')
             # transform all the values from strring to float
             for j, singlevaluestr in enumerate(valuelist):
-                if singlevaluestr in ['*', '/', '**']:
+                if singlevaluestr in ['+', '-', '*', '/', '**']:
                     continue
                 if singlevaluestr in paralist.keys():
                     singlevalue = paralist[singlevaluestr]
@@ -138,12 +140,25 @@ with open(parafilename, 'r') as ipt:
                 valuelist[opidx-1] = resultvalue
             # operate all the * or / in the list
             while('*' in valuelist or '/' in valuelist):
-                if valuelist[1] == '*':
-                    resultvalue = valuelist[0] * valuelist[2]
-                elif valuelist[1] == '/':
-                    resultvalue = valuelist[0] / valuelist[2]
-                del valuelist[1:3]
-                valuelist[0] = resultvalue
+                mulidx = (valuelist + ['*', '/']).index('*')
+                dividx = (valuelist + ['*', '/']).index('/')
+                opidx = min(mulidx, dividx)
+                if valuelist[opidx] == '*':
+                    resultvalue = valuelist[opidx-1] * valuelist[opidx+1]
+                elif valuelist[opidx] == '/':
+                    resultvalue = valuelist[opidx-1] / valuelist[opidx+1]
+                del valuelist[opidx:(opidx+2)]
+                valuelist[opidx-1] = resultvalue
+            while('+' in valuelist or '-' in valuelist):
+                addidx = (valuelist + ['+', '-']).index('+')
+                subidx = (valuelist + ['+', '-']).index('-')
+                opidx = min(addidx, subidx)
+                if valuelist[opidx] == '+':
+                    resultvalue = valuelist[opidx-1] + valuelist[opidx+1]
+                elif valuelist[opidx] == '-':
+                    resultvalue = valuelist[opidx-1] - valuelist[opidx+1]
+                del valuelist[opidx:(opidx+2)]
+                valuelist[opidx-1] = resultvalue
             # after this should already operated all the operators
             if len(valuelist) != 1:
                 raise Exception(parafilename + ' line ' + str(i) + ': Wrong syntax for operation.')
@@ -161,10 +176,6 @@ with open(parafilename, 'r') as ipt:
             value = getfloat(valuestr)
         else:
             value = valuestr.strip('\'')
-            #[23.12.31]this hack can be generalized later..
-            #i.e.: rootdir -> any
-            if '${rootdir}' in value:
-                value = value.replace('${rootdir}', rootdir)
 
         #assign dictionary to paralist and close the dictionary
         if valuetype==7:
