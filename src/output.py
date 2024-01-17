@@ -1,6 +1,7 @@
 import numpy as np
 import pdb
 import parameters as pars
+import os
 
 def writeatm(atmosphere, comment='', fmt1='{:12.4e}'):
     """
@@ -22,12 +23,17 @@ def writeatm(atmosphere, comment='', fmt1='{:12.4e}'):
         # write necesssary parameters
         parsstring = '# '
         # choose parameters to save    # Maybe should make this into pars
-        parstosave = ['runname', 'g', 'mgas', 'rho_int', 'an', 'T_star', 'R_star', 'Rp', 'rp', 'gibbsfile']
+        parstosave = ['runname', 'g', 'mgas', 'rho_int', 'an', 'mn0', 'f_stick', 'T_star', 'cs_com', 'cs_mol', 'Pref', 'R_star', 'Rp', 'rp', 'gibbsfile', 'rootdir']
         for paraname in parstosave:
             paravalue = getattr(pars, paraname)
             paratype = type(paravalue)
             if paratype == int or paratype == float:
                 paravalue = '{:.4e}'.format(paravalue)
+            if paratype == str:
+                # change the path to absolute path. This can be done more elegantly
+                if paraname == 'gibbsfile' or paraname == 'rootdir':
+                    paravalue = os.path.abspath(paravalue)
+                paravalue = '\'' + paravalue + '\''
             parsstring += paraname + ' = ' + paravalue + '; '
         parsstring += '\n'
         opt.write(parsstring)
@@ -50,7 +56,7 @@ def writeatm(atmosphere, comment='', fmt1='{:12.4e}'):
         opt.write(reactionstring)
 
         # write the header
-        header = '#cols::logP T(K) rhop(gcm-3) ap(cm)'
+        header = '#cols::logP T(K) rhop(gcm-3) ap(cm) Sn'
         for solidname in pars.solid:
             header += ' '
             header += solidname + '(s)'
@@ -66,10 +72,11 @@ def writeatm(atmosphere, comment='', fmt1='{:12.4e}'):
         T = atmosphere.cachegrid.T_grid
         rhop = atmosphere.rho
         ap = atmosphere.ap
+        Sn = atmosphere.cachegrid.Sn_grid
 
         # write each row (different pressure layer)
         Nc, Ngrid = y.shape
-        fmt2 = (Nc+4)*fmt1+'\n'
+        fmt2 = (Nc+5)*fmt1+'\n'
         for i in range(len(grid)):
-            line = fmt2.format(*((grid[i], T[i], rhop[i], ap[i])+tuple(y[:,i])))
+            line = fmt2.format(*((grid[i], T[i], rhop[i], ap[i], Sn[i])+tuple(y[:,i])))
             opt.write(line)

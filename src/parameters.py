@@ -3,10 +3,13 @@ import constants as cnt
 import sys, os
 
 # add path to /AtmCloud dir
+# HH: I don't like this line, because sometimes the file I ran is not in the src folder 
+# (for example, it may be calmeff.py in util, postprocess.py in userfuncs or paperplot.py in paperplot)
+# I suggest that the user should write down rootdir explicitly in parameters.txt
 # (not tested thoroughly)
-relcommand = sys.argv[0]
-ix = relcommand.index('src')
-rootdir = relcommand[:ix]
+# relcommand = sys.argv[0]
+# ix = relcommand.index('src')
+# rootdir = relcommand[:ix]
 
 
 def mygettype(valuestr):
@@ -50,156 +53,147 @@ def getfloat(valuestr):
 
     return value
 
+def readparsfile(parafilename):
+    dictOpen = False
+    with open(parafilename, 'r') as ipt:
+        i = -1
+        for line in ipt:
+            i += 1
+            if line.startswith('====='):
+                break
+            # ignore comment and space line
+            if line.startswith('#') or line.isspace():
+                continue
+            if '#' in line:
+                commentidx = line.find('#')
+                line = line[:commentidx]    # remove comments
+                line = line.strip()    # remove space
+
+            if dictOpen and line[0]=='}':#dictionary will be closed
+                valuetype = 7
+            else:
+                # load name-value pair
+                if line.count('=')!=1:
+                    raise Exception(parafilename + ' line ' + str(i) + ': Should only have one \'=\' sign .')
+                equalsignidx = line.find('=')
+                paraname = line[:equalsignidx].strip()
+                valuestr = line[(equalsignidx+1):].strip()    # The value string of the line
+
+                # get the type of the valuestring
+                valuetype = mygettype(valuestr)
+
+            #dictionary
+            if valuetype==6:
+                nentries = 0
+                dictOpen = True
+
+            # read list
+            elif valuetype == 5:
+                valuestr = valuestr.strip('[').strip(']')
+                valuelist = valuestr.split(', ')
+                listtype = []
+                for singlevalue in valuelist:
+                    listtype.append(mygettype(singlevalue))
+                if len(set(listtype)) != 1:
+                    raise Exception(parafilename + ' line ' + str(i) + ': List should have the same type')
+                # read value of each element
+                value = []
+                for singlevalue in valuelist:
+                    if listtype[0] == 0:
+                        if singlevalue == 'True':
+                            value.append(True)
+                        else:
+                            value.append(False)
+                    elif listtype[0] == 1:
+                        value.append(int(singlevalue))
+                    elif listtype[0] == 2:
+                        value.append(getfloat(singlevalue))
+                    else:
+                        value.append(singlevalue.strip('\''))
+                if listtype[0] != 3:
+                    value = np.array(value)
+
+            # evaluate the value
+            # Only compatible with +, -, *, /, **. No '( )' supported.
+            elif valuetype == 4:
+                valuelist = valuestr.split(' ')
+                # transform all the values from strring to float
+                for j, singlevaluestr in enumerate(valuelist):
+                    if singlevaluestr in ['+', '-', '*', '/', '**']:
+                        continue
+                    if singlevaluestr in paralist.keys():
+                        singlevalue = paralist[singlevaluestr]
+                    else:
+                        singlevalue = getfloat(singlevaluestr)
+                    valuelist[j] = singlevalue
+                # operate all the ** in the list
+                while('**' in valuelist):
+                    opidx = valuelist.index('**')    # index of the operator
+                    resultvalue = valuelist[opidx-1] ** valuelist[opidx+1]
+                    del valuelist[opidx:(opidx+2)]
+                    valuelist[opidx-1] = resultvalue
+                # operate all the * or / in the list
+                while('*' in valuelist or '/' in valuelist):
+                    mulidx = (valuelist + ['*', '/']).index('*')
+                    dividx = (valuelist + ['*', '/']).index('/')
+                    opidx = min(mulidx, dividx)
+                    if valuelist[opidx] == '*':
+                        resultvalue = valuelist[opidx-1] * valuelist[opidx+1]
+                    elif valuelist[opidx] == '/':
+                        resultvalue = valuelist[opidx-1] / valuelist[opidx+1]
+                    del valuelist[opidx:(opidx+2)]
+                    valuelist[opidx-1] = resultvalue
+                while('+' in valuelist or '-' in valuelist):
+                    addidx = (valuelist + ['+', '-']).index('+')
+                    subidx = (valuelist + ['+', '-']).index('-')
+                    opidx = min(addidx, subidx)
+                    if valuelist[opidx] == '+':
+                        resultvalue = valuelist[opidx-1] + valuelist[opidx+1]
+                    elif valuelist[opidx] == '-':
+                        resultvalue = valuelist[opidx-1] - valuelist[opidx+1]
+                    del valuelist[opidx:(opidx+2)]
+                    valuelist[opidx-1] = resultvalue
+                # after this should already operated all the operators
+                if len(valuelist) != 1:
+                    raise Exception(parafilename + ' line ' + str(i) + ': Wrong syntax for operation.')
+                value = valuelist[0]
+
+            # read other datatype
+            elif valuetype == 0:
+                if valuestr == 'True':
+                    value = True
+                else:
+                    value = False
+            elif valuetype == 1:
+                value = int(valuestr)
+            elif valuetype == 2:
+                value = getfloat(valuestr)
+            else:
+                value = valuestr.strip('\'')
+
+            #assign dictionary to paralist and close the dictionary
+            if valuetype==7:
+                paralist[dictname] = ddum
+                dictOpen = False
+
+            elif dictOpen:
+                if nentries==0:
+                    dictname = paraname
+                    ddum = dict()
+                else:
+                    ddum[paraname] = value
+                nentries += 1
+            else:
+                # save the attr to pars class
+                paralist[paraname] = value
+
+    ## special treatment for parameters
+    # special treatment for parafilename
+    paralist['parafilename'] = parafilename
+    return
+
 # get the local variables and parameter files
 paralist = locals()
-if len(sys.argv)>1:
-    parafilename = sys.argv[1]
-else:
-    parafilename = 'parameters.txt'
 
 i1 = sys.argv[0].rfind('/')
 paralist['rdir'] = sys.argv[0][:i1+1]
-
-dictOpen = False
-with open(parafilename, 'r') as ipt:
-    i = -1
-    for line in ipt:
-        i += 1
-        if line.startswith('====='):
-            break
-        # ignore comment and space line
-        if line.startswith('#') or line.isspace():
-            continue
-        if '#' in line:
-            commentidx = line.find('#')
-            line = line[:commentidx]    # remove comments
-            line = line.strip()    # remove space
-
-        if dictOpen and line[0]=='}':#dictionary will be closed
-            valuetype = 7
-        else:
-            # load name-value pair
-            if line.count('=')!=1:
-                raise Exception(parafilename + ' line ' + str(i) + ': Should only have one \'=\' sign .')
-            equalsignidx = line.find('=')
-            paraname = line[:equalsignidx].strip()
-            valuestr = line[(equalsignidx+1):].strip()    # The value string of the line
-
-            # get the type of the valuestring
-            valuetype = mygettype(valuestr)
-
-        #dictionary
-        if valuetype==6:
-            nentries = 0
-            dictOpen = True
-
-        # read list
-        elif valuetype == 5:
-            valuestr = valuestr.strip('[').strip(']')
-            valuelist = valuestr.split(', ')
-            listtype = []
-            for singlevalue in valuelist:
-                listtype.append(mygettype(singlevalue))
-            if len(set(listtype)) != 1:
-                raise Exception(parafilename + ' line ' + str(i) + ': List should have the same type')
-            # read value of each element
-            value = []
-            for singlevalue in valuelist:
-                if listtype[0] == 0:
-                    if singlevalue == 'True':
-                        value.append(True)
-                    else:
-                        value.append(False)
-                elif listtype[0] == 1:
-                    value.append(int(singlevalue))
-                elif listtype[0] == 2:
-                    value.append(getfloat(singlevalue))
-                else:
-                    value.append(singlevalue.strip('\''))
-            if listtype[0] != 3:
-                value = np.array(value)
-
-        # evaluate the value
-        # Only compatible with +, -, *, /, **. No '( )' supported.
-        elif valuetype == 4:
-            valuelist = valuestr.split(' ')
-            # transform all the values from strring to float
-            for j, singlevaluestr in enumerate(valuelist):
-                if singlevaluestr in ['+', '-', '*', '/', '**']:
-                    continue
-                if singlevaluestr in paralist.keys():
-                    singlevalue = paralist[singlevaluestr]
-                else:
-                    singlevalue = getfloat(singlevaluestr)
-                valuelist[j] = singlevalue
-            # operate all the ** in the list
-            while('**' in valuelist):
-                opidx = valuelist.index('**')    # index of the operator
-                resultvalue = valuelist[opidx-1] ** valuelist[opidx+1]
-                del valuelist[opidx:(opidx+2)]
-                valuelist[opidx-1] = resultvalue
-            # operate all the * or / in the list
-            while('*' in valuelist or '/' in valuelist):
-                mulidx = (valuelist + ['*', '/']).index('*')
-                dividx = (valuelist + ['*', '/']).index('/')
-                opidx = min(mulidx, dividx)
-                if valuelist[opidx] == '*':
-                    resultvalue = valuelist[opidx-1] * valuelist[opidx+1]
-                elif valuelist[opidx] == '/':
-                    resultvalue = valuelist[opidx-1] / valuelist[opidx+1]
-                del valuelist[opidx:(opidx+2)]
-                valuelist[opidx-1] = resultvalue
-            while('+' in valuelist or '-' in valuelist):
-                addidx = (valuelist + ['+', '-']).index('+')
-                subidx = (valuelist + ['+', '-']).index('-')
-                opidx = min(addidx, subidx)
-                if valuelist[opidx] == '+':
-                    resultvalue = valuelist[opidx-1] + valuelist[opidx+1]
-                elif valuelist[opidx] == '-':
-                    resultvalue = valuelist[opidx-1] - valuelist[opidx+1]
-                del valuelist[opidx:(opidx+2)]
-                valuelist[opidx-1] = resultvalue
-            # after this should already operated all the operators
-            if len(valuelist) != 1:
-                raise Exception(parafilename + ' line ' + str(i) + ': Wrong syntax for operation.')
-            value = valuelist[0]
-
-        # read other datatype
-        elif valuetype == 0:
-            if valuestr == 'True':
-                value = True
-            else:
-                value = False
-        elif valuetype == 1:
-            value = int(valuestr)
-        elif valuetype == 2:
-            value = getfloat(valuestr)
-        else:
-            value = valuestr.strip('\'')
-
-        #assign dictionary to paralist and close the dictionary
-        if valuetype==7:
-            paralist[dictname] = ddum
-            dictOpen = False
-
-        elif dictOpen:
-            if nentries==0:
-                dictname = paraname
-                ddum = dict()
-            else:
-                ddum[paraname] = value
-            nentries += 1
-        else:
-            # save the attr to pars class
-            paralist[paraname] = value
-
-## special treatment for parameters
-# special treatment for verbose
-if paralist['verbose'] == 'silent' or paralist['verbose'] == -2:
-    paralist['verboselevel'] = -2
-elif paralist['verbose'] == 'quiet' or paralist['verbose'] == -1:
-    paralist['verboselevel'] = -1
-elif paralist['verbose'] == 'default' or paralist['verbose'] == 0:
-    paralist['verboselevel'] = 0
-elif paralist['verbose'] == 'verbose' or paralist['verbose'] == 1:
-    paralist['verboselevel'] = 1

@@ -6,7 +6,14 @@ TBD:
 '''
 import sys
 import numpy as np
+# read parameters
 import parameters as pars
+if len(sys.argv)>1:
+    parafilename = sys.argv[1]
+else:
+    parafilename = 'parameters.txt'
+pars.readparsfile(parafilename)
+
 import functions as funs
 import constants as cnt
 from fmatrixsol import matrixsol
@@ -17,6 +24,7 @@ import chemistry
 import output
 import time
 
+init.set_params()
 # import the plot module
 if pars.verboselevel>-2 and pars.plotmode!='none':
     sys.path.append(pars.rdir + '../util/')
@@ -414,8 +422,6 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
     return t2-t1
 
 if __name__ == '__main__':
-
-    init.set_rundir(sys.argv)
     init.check_input_errors ()
 
     #suppress warnings

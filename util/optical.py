@@ -50,7 +50,7 @@ def prepare_optical (optooldir=None, wavelengthgrid=None, dirmeff=None, dirkappa
 
     if wavelengthgrid==None:
         #default grid 0.5--10 micron
-        wavelengthgrid = 10**np.linspace(np.log10(0.5), np.log10(10.0), 100)
+        wavelengthgrid = 10**np.linspace(np.log10(0.5), np.log10(20.0), 100)
 
     elif type(wavelengthgrid)==str:
         #TBD read the wavelength grid from file 

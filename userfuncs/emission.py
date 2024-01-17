@@ -12,17 +12,13 @@ from petitRADTRANS import nat_cst as nc
 import sys
 sys.path.append('/home/helong/software/miniforge3/lib/python3.10/site-packages')
 import pyfastchem
-sys.path.append('../')
-import read
+sys.path.append('../../src')
+import chemistry
 import constants as cnt
-import parameters as pars
-import functions as funs
 import itertools
 import pdb
-from draw import myplot
 sys.path.append('../../util')
-from calmeff import cal_eff_m_all, writelnk
-from calkappa import cal_opa_all
+from draw import myplot
 
 def write_element(elementgrid):
     ''' Write the elemental abundance to input.dat '''
@@ -31,15 +27,32 @@ def write_element(elementgrid):
         for element, abundance in elementgrid.items():
             opt.write(element + ' ' + str(abundance) + '\n')
 
-gibbsfolder = '../../'
-chem = read.chemdata(gibbsfolder + pars.gibbsfile)
+########### reconstruct the atmosphere object ###########
+gridfile = 'gridHR8799e.txt'
+kappafolder = 'coeff/'
+# kappafolder = None
+from read import reconstruct
+atmosphere, pars = reconstruct(gridfile)
+
+ncod = len(pars.solid)
+ngas = len(pars.gas)
+
+Parr = np.exp(atmosphere.grid)
+Parrbar = Parr/1e6
+cachegrid = atmosphere.cachegrid
+Tarr = cachegrid.T_grid
+y = atmosphere.y
+rhop = atmosphere.rho
+
+########### equilibrium chemistry calculations ##########
+chem = atmosphere.chem
 # other interesting species and their concentration
 extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
 extragascon = np.array([8e-3, 1, 0.33, 0, 0])
 # all of the gas molecules to be considered in the spectrum calculation
 gasmols = []
 for gasname in extragas + pars.gas:
-    gasmols.append(read.molecule(gasname))
+    gasmols.append(chemistry.molecule(gasname))
 # all of the elements that appear in the molecules
 elementlist = {}    # elemental abundance due to extra species
 for gasmol in gasmols:
@@ -52,25 +65,6 @@ for i in range(len(extragas)):
     num = extragascon[i] / gasmol.mu
     for element in gasmol.element.keys():
         elementlist[element] += num * gasmol.element[element]
-
-ncod = len(pars.solid)
-ngas = len(pars.gas)
-
-data = np.genfromtxt('./grid' + pars.runname + '.txt', skip_header=1)
-data = data.T
-Parr = np.exp(data[0])
-Parrbar = Parr/1e6    # Parr should be in bar, rather than in cgs unit
-y0 = data[1:]
-cache = funs.init_cache(Parr, chem)
-# prepare for the radiation transfer
-ap = funs.cal_ap(y0[:ncod], y0[-1])
-ap[-1] = ap[-2]
-xc = y0[:ncod]
-# xc = xc[[0, 1, 7, 9]]    # only choose cloud species that's included in petitRADTRANS
-xn = y0[-1]
-n_p = funs.cal_np(xn, cache.cachegrid)
-bs = xc / (xc.sum(axis=0) + xn)
-Tarr = cache.cachegrid.T_grid
 
 ygasnew = np.empty((len(gasmols), len(Parr)))
 
@@ -113,7 +107,7 @@ for j in range(len(Parr)):
     elementgrid = elementlist.copy()
     for i in range(ngas):
         gasmol = gasmols[i+len(extragas)]
-        num = y0[i+ncod, j] / gasmol.mu
+        num = y[i+ncod, j] / gasmol.mu
         for element in gasmol.element.keys():
             elementgrid[element] += num * gasmol.element[element]
 
@@ -129,7 +123,7 @@ for j in range(len(Parr)):
                                 1)
 
     # Read input file
-    input_data.temperature = np.array([cache.cachegrid.T_grid[j]])
+    input_data.temperature = np.array([cachegrid.T_grid[j]])
     input_data.pressure = np.array([Parrbar[j]])
 
     # Calculate the chemical equilibrium
@@ -137,29 +131,48 @@ for j in range(len(Parr)):
 
     for i in range(len(gasmols)):
         # print(gasmols[i].name + ' ', output_data.number_densities[0][gasindex[i]])
-        ygasnew[i, j] = gasmols[i].mu * cnt.mu * output_data.number_densities[0][gasindex[i]] / cache.cachegrid.rho_grid[j]
+        ygasnew[i, j] = gasmols[i].mu * cnt.mu * output_data.number_densities[0][gasindex[i]] / cachegrid.rho_grid[j]
 
 # plot the atmosphere after equilibrium chemistry calculation
-ynew = np.vstack((y0[:ncod], ygasnew[len(extragas):], y0[-1]))
-myplot(Parr, ynew, ncod, ngas, plotmode='popup')
+ynew = np.vstack((y[:ncod], ygasnew[len(extragas):], y[-1]))
+myplot(Parr, ynew, rhop, ncod, ngas, plotmode='popup')
 # pdb.set_trace()
 
-####### calculate effective refractory index #######
-wlen = np.logspace(0, np.log10(20), 100)
-mmat = cal_eff_m_all(bs, pars.solid, wlen)
-writelnk(mmat, wlen, pars.rho_int, folder='meff')
-# pdb.set_trace()
+########### calculate or read oopacity #########
+ap = atmosphere.ap
+n_p = atmosphere.np
+rhog = cachegrid.rho_grid
+if kappafolder == None:
+    # calculate effective refractory index
+    bs = atmosphere.bs
+    wlenkappa = np.logspace(0, np.log10(20), 100)
+    mmat = cal_eff_m_all(bs, pars.solid, wlenkappa)
+    writelnk(mmat, wlenkappa, rhop, folder='meff')
 
-####### calculate kappa #######
-opobj = cal_opa_all('meff', ap, write=False)
-pdb.set_trace()
-kappascadata = opobj['kext']/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
-kappaabsdata = opobj['kext']/cache.cachegrid.rho_grid*n_p*4*np.pi/3*ap**3
-# pdb.set_trace()
+    # calculate kappa
+    opobj = cal_opa_all(ap, write=False, Nlam=len(wlenkappa), optooldir='/home/helong/software/optool')
+    kappasca = opobj['ksca']
+    kappaabs = opobj['kabs']
+else:
+    data = np.genfromtxt(kappafolder + '0.txt')
+    wlenkappa = data[:, 0]
+    kappasca = np.empty((len(wlenkappa), len(Parr)))
+    kappaabs = np.empty((len(wlenkappa), len(Parr)))
+    for i in range(len(Parr)):
+        kappafilename = kappafolder + f'{i}.txt'
+        data = np.genfromtxt(kappafilename)
+        data = data.T
+        kappasca[:, i] = data[2]
+        kappaabs[:, i] = data[1]
+kappadatasca = kappasca/rhog*n_p*4*np.pi/3*ap**3
+kappadataabs = kappaabs/rhog*n_p*4*np.pi/3*ap**3
+# calculate spline object
+spsca = RectBivariateSpline(wlenkappa, Parrbar, kappadatasca)
+spabs = RectBivariateSpline(wlenkappa, Parrbar, kappadataabs)
+# sys.exit()
 
-spsca = RectBivariateSpline(opobj['wlen'], Parrbar, kappascadata)
-spabs = RectBivariateSpline(opobj['wlen'], Parrbar, kappaabsdata)
-
+####### Radiation transfer part #######
+wlenrange = [1, 20]
 # cloud opacity function
 def cloud_opas(spobj):
     ''' return cloud opacity (cm^2/g)
@@ -175,9 +188,7 @@ def cloud_opas(spobj):
 
 ####### Radiation transfer part #######
 linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
-# cloud_species = ['Mg2SiO4(c)_cm', 'MgSiO3(c)_cm', 'Fe(c)_cm', 'Al2O3(c)_cm']
-# atmosphere = Radtrans(line_species=linespecies, cloud_species=cloud_species, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [0.6, 15], do_scat_emis = True)
-atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [wlen[0], wlen[-1]])
+atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [wlenrange[0], wlenrange[-1]])
 atmosphere.setup_opa_structure(Parrbar)
 
 mass_fractions = {}
@@ -195,7 +206,7 @@ mass_fractions['TiO_all_Exomol'] = ygasnew[10]
 mass_fractions['Al'] = ygasnew[11]
 
 
-MMW = 2.34 * np.ones_like(Parr)
+MMW = pars.mgas / cnt.mu * np.ones_like(Parr)
 
 R_pl = pars.Rp
 gravity = pars.g
@@ -204,15 +215,19 @@ R_star = pars.R_star    # in Jupiter radius
 
 wavelength = nc.c/atmosphere.freq
 fconvert = 1e-3 * nc.c / wavelength**2 * 1e-4
+flux = nc.c/atmosphere.freq/1e-4
+labels = ['wavelength']
 
-plt.figure(figsize=(12, 6))
+plt.figure(figsize=(12, 4))
 
 # calculate atmosphere without CO2
 mass_fractions['CO2'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO2', alpha=0.6)
+l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO2', alpha=0.6)
+flux = np.vstack((flux, atmosphere.flux*fconvert))
+labels.append(l.get_label().replace(' ', '_'))
 
 # calculate atmosphere without CO
 mass_fractions['CO2'] = ygasnew[4]
@@ -220,7 +235,9 @@ mass_fractions['CO_all_iso_HITEMP'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO', alpha=0.6)
+l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CO', alpha=0.6)
+flux = np.vstack((flux, atmosphere.flux*fconvert))
+labels.append(l.get_label().replace(' ', '_'))
 
 # calculate atmosphere without H2O
 mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
@@ -228,7 +245,9 @@ mass_fractions['H2O_HITEMP'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2O', alpha=0.6)
+l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2O', alpha=0.6)
+flux = np.vstack((flux, atmosphere.flux*fconvert))
+labels.append(l.get_label().replace(' ', '_'))
 
 # calculate atmosphere without CH4
 mass_fractions['H2O_HITEMP'] = ygasnew[7]
@@ -236,7 +255,9 @@ mass_fractions['CH4'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CH4', alpha=0.6)
+l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no CH4', alpha=0.6)
+flux = np.vstack((flux, atmosphere.flux*fconvert))
+labels.append(l.get_label().replace(' ', '_'))
 
 # calculate atmosphere without H2S
 mass_fractions['CH4'] = ygasnew[3]
@@ -244,20 +265,26 @@ mass_fractions['H2S'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2S', alpha=0.6)
+l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='no H2S', alpha=0.6)
+flux = np.vstack((flux, atmosphere.flux*fconvert))
+labels.append(l.get_label().replace(' ', '_'))
 
 # calculate clear atmosphere
 mass_fractions['H2S'] = ygasnew[9]
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl)
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='clear', linestyle='--')
+l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='clear', linestyle='--')
+flux = np.vstack((flux, atmosphere.flux*fconvert))
+labels.append(l.get_label())
 
 # calculate cloudy atmosphere
 # atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
 
-plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='cloudy', linewidth=3)
+l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='cloudy', linewidth=3)
+flux = np.vstack((flux, atmosphere.flux*fconvert))
+labels.append(l.get_label())
 
 plt.legend()
 plt.xscale('log')
@@ -265,8 +292,17 @@ plt.xlabel('Wavelength (microns)')
 plt.ylabel(r'Planet flux $F_\nu$ (W m$^{-2}$ $\mu m^{-1}$)')
 ax = plt.gca()
 # ax.set_xlim([2., 5.5])
-plt.savefig(savedir + 'spectrum.png', dpi=288)
+# plt.savefig('spectrum' + pars.runname + '.pdf', dpi=288)
 plt.show()
+
+with open('spectrum' + pars.runname + '.txt', 'w') as opt:
+    for label in labels:
+        opt.write(label + ' ')
+    opt.write('\n')
+    for i in range(len(flux[0])):
+        for j in range(len(flux)):
+            opt.write(f'{flux[j, i]} ')
+        opt.write('\n')
 
 import os
 os.remove('input.dat')

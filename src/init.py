@@ -11,13 +11,24 @@ from scipy.optimize import root
 import pdb
 import sys
 
-def set_rundir(argv):
-    """
-    the first argument will point to 'relaxation.py'
-    """
-    i1 = argv[0].rfind('/')
-    pars.rdir = argv[0][:i1+1]
+# def set_rundir(argv):
+#     """
+#     the first argument will point to 'relaxation.py'
+#     """
+#     i1 = argv[0].rfind('/')
+#     pars.rdir = argv[0][:i1+1]
 
+def set_params():
+    ''' set more parameters for pars '''
+    # special treatment for verbose
+    if pars.verbose == 'silent' or pars.verbose == -2:
+        pars.verboselevel = -2
+    elif pars.verbose == 'quiet' or pars.verbose == -1:
+        pars.verboselevel = -1
+    elif pars.verbose == 'default' or pars.verbose == 0:
+        pars.verboselevel = 0
+    elif pars.verbose == 'verbose' or pars.verbose == 1:
+        pars.verboselevel = 1
 
 def check_input_errors ():
 

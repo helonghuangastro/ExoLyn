@@ -5,10 +5,9 @@ import sys
 sys.path.append('../')
 
 import atmosphere_class
-import functions as funs
-import parameters as pars
+# import parameters as pars
 import constants as cnt
-import chemistry
+# import chemistry
 
 ##TBA: /home/helong is not the same on my computer!
 
@@ -84,28 +83,28 @@ def cal_opa_all(aparr, write=False, Nlam=100, wavelengthgrid=None,
         return kappadata
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 
-    optooldir = sys.path.append('/home/helong/software/optool')
+#     optooldir = sys.path.append('/home/helong/software/optool')
 
-    # read the data and calculate the particle size
-    ngas = len(pars.gas)
-    data = np.genfromtxt('../grid.txt', skip_header=1)
-    data = data.T
-    Parr = np.exp(data[0])
-    Parrbar = Parr/1e6
-    logP = np.log(Parr)
+#     # read the data and calculate the particle size
+#     ngas = len(pars.gas)
+#     data = np.genfromtxt('../grid.txt', skip_header=1)
+#     data = data.T
+#     Parr = np.exp(data[0])
+#     Parrbar = Parr/1e6
+#     logP = np.log(Parr)
 
-    chem = chemistry.chemdata('../' + pars.gibbsfile)
-    cache = funs.init_cache(Parr, chem)
-    atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)
+#     chem = chemistry.chemdata('../' + pars.gibbsfile)
+#     cache = funs.init_cache(Parr, chem)
+#     atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)
 
-    atmosphere.update(data[1:])
+#     atmosphere.update(data[1:])
 
-    for i in range(atmosphere.N):
-        #CWO -- I'm confused by this
-        p = optool.particle(f'~/software/optool/optool meff/{i}.lnk -p 0.25 -a {atmosphere.ap[i]*1e4} -l 1 20 100 -o coeff')
-        with open(f'coeff/{i}.txt', 'w') as opt:
-            opt.write('wavelength(micron) kappa_abs kappa_sca kappa_ext asymmetry_parameter\n')
-            for j in range(100):
-                opt.write(f'{p.lam[j]} {p.kabs[0,j]} {p.ksca[0,j]} {p.kext[0,j]} {p.gsca[0,j]}\n')
+#     for i in range(atmosphere.N):
+#         #CWO -- I'm confused by this
+#         p = optool.particle(f'~/software/optool/optool meff/{i}.lnk -p 0.25 -a {atmosphere.ap[i]*1e4} -l 1 20 100 -o coeff')
+#         with open(f'coeff/{i}.txt', 'w') as opt:
+#             opt.write('wavelength(micron) kappa_abs kappa_sca kappa_ext asymmetry_parameter\n')
+#             for j in range(100):
+#                 opt.write(f'{p.lam[j]} {p.kabs[0,j]} {p.ksca[0,j]} {p.kext[0,j]} {p.gsca[0,j]}\n')
