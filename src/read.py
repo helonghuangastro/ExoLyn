@@ -69,6 +69,17 @@ def reconstruct(gridfilename):
     cachegrid.setvalue('Sn_grid',          Snarr)
     cachegrid.setvalue('Sbase_grid',       funs.cal_Sbase(Parr, Tarr, chem))
 
+    # add items to cachemid
+    def geomean(x):
+        return np.sqrt(x[1:]*x[:-1])
+    cachemid.setvalue('T_grid', geomean(Tarr))
+    cachemid.setvalue('rho_grid', geomean(cachegrid.rho_grid))
+    # cachemid.setvalue('v_th_grid', geomean(cachegrid.v_th_grid))
+    # cachemid.setvalue('diffusivity_grid', geomean(cachegrid.diffusivity_grid))
+    # cachemid.setvalue('lmfp_grid', geomean(cachegrid.lmfp_grid))
+    # cachemid.setvalue('Sn_grid', geomean(cachegrid.Sn_grid))
+    # cachemid.setvalue('Sbase_grid', geomean(cachegrid.Sbase_grid.T).T)
+
     # set cache object
     # Note: cachemid is empty by now. So it's not yet possible to restart simulation from a certain point
     cache.setvalue('cachegrid', cachegrid)
