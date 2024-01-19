@@ -28,7 +28,7 @@ def write_element(elementgrid):
             opt.write(element + ' ' + str(abundance) + '\n')
 
 ########### reconstruct the atmosphere object ###########
-gridfile = 'gridGJ1214.txt'
+gridfile = 'gridCO3.txt'
 kappafolder = 'coeff/'
 # kappafolder = None
 from read import reconstruct
@@ -181,33 +181,24 @@ def cloud_opas(spobj):
 
     return give_opacity
 
-# linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
-linespecies = ['CO_all_iso_HITEMP', 'CH4', 'CO2', 'Na_allard', 'K_allard', 'H2S']
+linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
+# linespecies = ['CO_all_iso_HITEMP', 'CH4', 'CO2', 'Na_allard', 'K_allard', 'H2S']
 atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [wlenrange[0], wlenrange[-1]])
 atmosphere.setup_opa_structure(Parrbar)
 
 mass_fractions = {}
-# mass_fractions['H2'] = ygasnew[1]
-# mass_fractions['He'] = ygasnew[2]
-# mass_fractions['H2O_HITEMP'] = ygasnew[7]
-# mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
-# mass_fractions['H2S'] = ygasnew[9]
-# mass_fractions['Mg'] = ygasnew[5]
-# mass_fractions['SiO'] = ygasnew[6]
-# mass_fractions['Fe'] = ygasnew[8]
-# mass_fractions['CO2'] = ygasnew[4]
-# mass_fractions['CH4'] = ygasnew[3]
-# mass_fractions['TiO_all_Exomol'] = ygasnew[10]
-# mass_fractions['Al'] = ygasnew[11]
-
 mass_fractions['H2'] = ygasnew[1]
 mass_fractions['He'] = ygasnew[2]
+mass_fractions['H2O_HITEMP'] = ygasnew[7]
 mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
 mass_fractions['H2S'] = ygasnew[9]
+mass_fractions['Mg'] = ygasnew[5]
+mass_fractions['SiO'] = ygasnew[6]
+mass_fractions['Fe'] = ygasnew[8]
 mass_fractions['CO2'] = ygasnew[4]
 mass_fractions['CH4'] = ygasnew[3]
-mass_fractions['Na'] = 5
-mass_fractions['K'] = 7
+mass_fractions['TiO_all_Exomol'] = ygasnew[10]
+mass_fractions['Al'] = ygasnew[11]
 
 MMW = pars.mgas / cnt.mu * np.ones_like(Parr)
 
