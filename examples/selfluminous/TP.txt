@@ -1,0 +1,10 @@
+P_ref T_ref
+# TP profile taken from Mollière et al. (2020) Fig. A2
+1 480
+10 520
+100 600
+1e3 700
+1e4 800
+1e5 1000
+1e6 1600
+4e6 2500

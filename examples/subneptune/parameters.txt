@@ -1,0 +1,83 @@
+# stellar and planet basic parameters
+T_star = 3110    # stellar temperature, K
+R_star = 0.2 * cnt.R_sun  # stellar radius, cm
+
+Rp = 0.245 * cnt.Rj # planet radius, cm
+rp = 0.0149 * cnt.au  # planet orbital radius, cm
+g = 1065        # gravitational acceleration, cm s^-1
+
+
+# simulation control parameters
+runname = 'GJ1214'
+rootdir = '../../'
+gibbsfile = 'gibbs.txt'
+##suppress warnings?
+suppresswarnings = 'all'
+
+
+# plot and output
+# verbose level of plot
+## choose one of [silent,quiet,default,verbose] 
+# -- 'silent'= no pop-up figure; 
+# -- 'quiet'= only draw at the end; 
+# -- 'default'= plot once finished converging fpara; 
+# -- 'verbose'= plot for every fpara value
+verbose = 'quiet'     
+# plot behavior
+##choose w/r to show and/or save intermediate files.
+# -- 'all'      :do all of the below
+# -- 'save'     :save intermediate data to png file
+# -- 'popup'    :draw to inspect
+# -- 'none'     :do nothing 
+plotmode = 'save'
+writeoutputfile = True
+
+
+# simulation settings
+N = 700
+Pa = 1.         # pressure at the upper limit of atmosphere, in cgs units
+Pb = 1e6        # pressure at the lower limit of atmosphere, in cgs units
+Pref = 1e6      # reference pressure at which the gibbs energy is measured
+autoboundary = True     # whether or not adjust the lower boundary automatically
+
+
+# T-P profile settings
+opa_IR = 0.3    # opacity in IR, cm^2 g^-1
+firr = 1 / 4    # radiation distribution
+opa_vis_IR = 0.158    # opacity ratio between visual and IR
+T_int = 300     # interior temperature, K
+
+
+# other uncertainties in the cloud model
+mgas = 5.0 * cnt.mu    # gas molecular weight, g
+Kzz = 1e8       # diffusion, cm^2s^-1
+Kp = 1e8        # particle diffusivity, cm^2s^-1
+cs_mol = 2e-15  # molecular cross section, cm^2
+
+f_stick = 1.    # sticking probability
+cs_com = 8e-15  # combined cross section for vapor and H2, cm^2
+rho_int = 2.8   # particle internal density, g cm^-3
+an = 1e-7       # nucleation radius, cm
+mn0 = 4 / 3 * np.pi * rho_int * an ** 3    # nucleation mass, g
+nuc_pro = 1e-15 # (integrated) nuclei productio rate, g cm^-2 s^-1
+sigma_nuc = 0.2 # width of the nucleation profile
+P_star = 60     # nucleation height, in cgs
+
+
+# chemical settings
+gas = ['Na', 'NaCl', 'K', 'Zn', 'H2S']
+xvb = [1.4e-3, 4.6e-4, 6e-5, 7.5e-5, 8.6e-3]
+
+
+##optical constant calculations
+calcoptical = True              #w/r to calculate optical constants
+optooldir = '/home/helong/...'  #directory where "optool" is installed
+doptical = {
+optooldir='/home/helong/software/optool/'
+}
+
+============ put reactions here =============
+NaCl -> NaCl(s)
+NaCl + K -> KCl(s) + Na
+Zn + H2S -> ZnS(s) + H2
+

@@ -1,0 +1,88 @@
+# stellar and planet basic parameters
+T_star = 7339    # stellar temperature, K
+R_star = 1.49 * cnt.R_sun  # stellar radius, cm
+
+Rp = 1.2 * cnt.Rj # planet radius, cm
+rp = 16 * cnt.au  # planet orbital radius, cm
+g = 10000        # gravitational acceleration, cm s^-1
+
+
+# simulation control parameters
+runname = 'HR8799e'
+rootdir = '../../'
+gibbsfile = rootdir + 'tables/gibbs.txt'
+##suppress warnings?
+suppresswarnings = 'all'
+
+
+# plot and output
+# verbose level of plot
+## choose one of [silent,quiet,default,verbose] 
+# -- 'silent'= no pop-up figure; 
+# -- 'quiet'= only draw at the end; 
+# -- 'default'= plot once finished converging fpara; 
+# -- 'verbose'= plot for every fpara value
+verbose = 'quiet'
+# plot behavior
+##choose w/r to show and/or save intermediate files.
+# -- 'all'      :do all of the below
+# -- 'save'     :save intermediate data to png file
+# -- 'popup'    :draw to inspect
+# -- 'none'     :do nothing 
+plotmode = 'all'
+writeoutputfile = True    # output file setting
+
+
+# simulation settings
+N = 700
+Pa = 1.         # pressure at the upper limit of atmosphere, in cgs units
+Pb = 1e7        # pressure at the lower limit of atmosphere, in cgs units
+Pref = 1e6      # reference pressure at which the gibbs energy is measured
+autoboundary = True     # whether or not adjust the lower boundary automatically
+
+
+# T-P profile settings
+TPmode = 'interp'
+TPfile = './TP.txt'
+
+
+# other uncertainties in the cloud model
+mgas = 2.34 * cnt.mu    # gas molecular weight, g
+Kzz = 1e8       # diffusion, cm^2s^-1
+Kp = 1e8        # particle diffusivity, cm^2s^-1
+cs_mol = 2e-15  # molecular cross section, cm^2
+
+f_stick = 1.    # sticking probability
+cs_com = 8e-15  # combined cross section for vapor and H2, cm^2
+rho_int = 2.8   # particle internal density, g cm^-3
+an = 1e-7       # nucleation radius, cm
+mn0 = 4 / 3 * np.pi * rho_int * an ** 3    # nucleation mass, g
+nuc_pro = 1e-15 # (integrated) nuclei productio rate, g cm^-2 s^-1
+sigma_nuc = 0.2 # width of the nucleation profile
+P_star = 60     # nucleation height, in cgs
+
+
+# chemical settings
+gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
+xvb = [7.56e-4, 1.32e-3, 1e-3, 1e-3, 8e-4, 1e-5, 7e-5]
+
+
+# optical constant calculations
+calcoptical = True              #w/r to calculate optical constants
+optooldir = '/home/helong/...'  #directory where "optool" is installed
+doptical = {
+optooldir='/home/helong/software/optool/'
+}
+
+============ put reactions here =============
+Mg + SiO + 2H2O -> MgSiO3(s) + 2H2
+2Mg + SiO + 3H2O -> Mg2SiO4(s) + 3H2
+SiO + H2O -> SiO2(s) + H2
+Mg + H2O -> MgO(s) + H2
+Fe + H2O -> FeO(s) + H2
+Fe + H2S -> FeS(s) + H2
+2Fe + 3H2O -> Fe2O3(s) + 3H2
+Fe -> Fe(s)
+TiO + H2O -> TiO2(s) + H2
+2Al + 3H2O -> Al2O3(s) + 3H2
+
