@@ -373,10 +373,13 @@ def init(atmosphere, method):
         y0[ncod+i] = pars.xvb[i]
 
     # try to find initial nuclei concentration by eliminating the source term
+    TPdata = np.genfromtxt(pars.TPfile, names=True, deletechars='', comments='#')
+    logP_ref = np.log10(TPdata['P_ref'])
+    T_ref = TPdata['T_ref']
     def dxndlogP(logP):
         ''' calculate xn derivative to logP '''
         P = np.exp(logP)
-        T = funs.TP(P)
+        T = np.interp(np.log10(P), logP_ref, TPdata['T_ref'])
         rho = funs.rho(P, T)
         pref = -cnt.kb * T / (pars.g * pars.mgas)
         return - pref * funs.cal_Mn(P)/(pars.Kzz*rho)
