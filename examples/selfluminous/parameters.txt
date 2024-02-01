@@ -4,11 +4,11 @@ R_star = 1.49 * cnt.R_sun  # stellar radius, cm
 
 Rp = 1.2 * cnt.Rj # planet radius, cm
 rp = 16 * cnt.au  # planet orbital radius, cm
-g = 10000        # gravitational acceleration, cm s^-1
+g = 18500        # gravitational acceleration, cm s^-1
 
 
 # simulation control parameters
-runname = 'HR8799e'
+runname = 'HR8799eGuillot'
 rootdir = '../../'
 gibbsfile = rootdir + 'tables/gibbs.txt'
 ##suppress warnings?
@@ -42,8 +42,10 @@ autoboundary = True     # whether or not adjust the lower boundary automatically
 
 
 # T-P profile settings
-TPmode = 'interp'
-TPfile = './TP.txt'
+opa_IR = 0.3    # opacity in IR, cm^2 g^-1
+firr = 1 / 4    # radiation distribution
+opa_vis_IR = 0.158    # opacity ratio between visual and IR
+T_int = 500     # interior temperature, K
 
 
 # other uncertainties in the cloud model
