@@ -34,6 +34,7 @@ class atmosphere():
         '''
         ncond = self.ncond
         ngas = self.ngas
+        self.Parr = np.exp(self.grid)
         y = self.y
 
         self.xc = np.atleast_2d(y[:ncond])
