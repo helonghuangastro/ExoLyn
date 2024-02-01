@@ -25,9 +25,12 @@ import output
 import time
 
 init.set_params()
+
+#[24.02.01]cwo: put it outside the if loop
+sys.path.append(pars.rdir + '../util/')
+
 # import the plot module
 if pars.verboselevel>-2 and pars.plotmode!='none':
-    sys.path.append(pars.rdir + '../util/')
     from draw import myplot
 
 class control():

@@ -11,6 +11,23 @@ import sys, os
 # ix = relcommand.index('src')
 # rootdir = relcommand[:ix]
 
+def replace_environment (sss):
+    '''
+    check w/r "string" contains environment variables ($...)
+    and replace accordingly
+    '''
+    while True:
+        i0 = sss.find('$')
+        if i0>-1:
+            i1 = sss.find(r'/',i0)  #this is a bit tricky...
+            envvar = sss[i0:i1]     #including $ sign
+            if envvar[1:] in os.environ:
+                sss =sss.replace(envvar,os.environ.get(envvar[1:]))
+        else:
+            break
+
+    return sss
+
 
 def mygettype(valuestr):
     '''
@@ -168,8 +185,11 @@ def readparsfile(parafilename):
                 value = int(valuestr)
             elif valuetype == 2:
                 value = getfloat(valuestr)
+
+            #[24.02.01]cwo: this is a string?
             else:
                 value = valuestr.strip('\'')
+                value = replace_environment (value)
 
             #assign dictionary to paralist and close the dictionary
             if valuetype==7:
