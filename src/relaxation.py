@@ -425,6 +425,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
     return t2-t1
 
 if __name__ == '__main__':
+    t0 = time.time()
     init.check_input_errors ()
 
     #suppress warnings
@@ -448,6 +449,8 @@ if __name__ == '__main__':
 
     y0 = init.init(atmosphere, method='Newton')
     atmosphere.update(y0)
+    telap = time.time() -t0
+    print(f'[relaxation]:initialization finished in {telap:.2f} seconds')
     # pdb.set_trace()
     # plot the initial state
     if pars.verboselevel >= 0:

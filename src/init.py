@@ -100,7 +100,7 @@ def condnewtonold(Parr, reactions, cache, nu, muv, murc, xn):
                     n = n+step/2**i
                     break
                 if i>=10:
-                    print('error in finding an appropraite solution')
+                    print('[init]error in finding an appropraite solution')
                     pdb.set_trace()
                 i=i+1
 
@@ -158,14 +158,16 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid, xn0):
             for i in range(len(n)):
                 xcnew = xcpos.copy()
                 xcnew[i] *= 1.001
-                rhopnew = (np.sum(xcnew)+xn)/(np.sum(xcnew/rhorel)+xn) * pars.rho_int
+                #rhopnew = (np.sum(xcnew)+xn)/(np.sum(xcnew/rhorel)+xn) * pars.rho_int
+                rhopnew = (xcnew.sum()+xn)/((xcnew/rhorel).sum()+xn) * pars.rho_int
                 apnew = funs.cal_ap(xcnew, xn, rhopnew)
                 t_coag_new = 1/funs.cal_t_coag_inv(apnew, rhopnew, n_p, cache)
                 jac[-1, i] = (np.log(t_coag_new) - np.log(t_coag)) / (0.001*xcpos[i])*murc[i]
 
             # calculate dt_coag/da numerically, then calculate dF[-1]/dn analytically
             xnnew = xn*1.001
-            rhopnew = (np.sum(xcpos)+xnnew)/(np.sum(xcpos/rhorel)+xnnew) * pars.rho_int
+            #rhopnew = (np.sum(xcpos)+xnnew)/(np.sum(xcpos/rhorel)+xnnew) * pars.rho_int
+            rhopnew = ((xcpos).sum()+xnnew)/((xcpos/rhorel).sum()+xnnew) * pars.rho_int
             ap = funs.cal_ap(xcpos, xnnew, rhopnew)
             n_p = funs.cal_np(xnnew, cache)
             t_coag_new = 1/funs.cal_t_coag_inv(ap, rhopnew, n_p, cache)
@@ -179,11 +181,12 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid, xn0):
     def flag(n, xn):
         ''' check whether the solution is acceptable'''
         xvleft = xvb - np.matmul(n, nu)*muv
-        if (n<=0.).any():
-            xcflag = False
-        else:
-            xcflag = True
-        if (xvleft<=0.).any():
+        #cwo: this is per definition satisfied now
+        #if (n<=0.).any():
+        #    xcflag = False
+        #else:
+        xcflag = True
+        if (xvleft<=0.).any():#cwo: why "<="?
             xvflag = False
         else:
             xvflag = True
@@ -195,15 +198,40 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid, xn0):
 
     def newn(step, n, xn):
         ''' From the step and n and xn, find the new n '''
-        i = 0
+
+        #[24.02.01]cwo:calculate initial i
+        #-not 100% sure of this
+        #-I also realize that the real issue is of numerical precision
+        ii = step[:-1]<0
+        if sum(ii)==0:
+            imin = 0
+            kmin = 0
+        else:
+            imin = max(0, int(max(-np.log(-n[ii]/step[:-1][ii])/np.log(2))))
+            dum1 = xvb /muv -(n@nu)
+            dum2 = step[:-1]@nu
+            karr = np.where(dum1/dum2>0,-np.log(dum1/dum2)/np.log(2),0)
+            kmin = max(0, int(max(karr)))
+
+
+        i = 0 #the standard
+        i = max(imin,kmin)
         while(True):
-            xcflag, xvflag, xnflag = flag(n+step[:-1]/2**i, xn)
-            if xcflag and xvflag:
-                n = n+step[:-1]/2**i
-                step[-1] = np.minimum(step[-1], xn*9)
-                step[-1] = np.maximum(step[-1], -xn*0.9)
-                xn += step[-1]
-                break
+            #xcflag, xvflag, xnflag = flag(n+step[:-1]/2**i, xn)
+            nnew = n+step[:-1]/2**i
+            xvleft = xvb - np.matmul(nnew, nu)*muv
+            if (nnew>0.).all():
+                xcflag, xvflag, xnflag = flag(nnew, xn)
+                if xcflag and xvflag:
+                    #here we can check my assertion if we start w/ "i=0"
+                    #assert(i>=imin)
+                    #assert(i>=kmin)
+                    #n = n+step[:-1]/2**i
+                    n = nnew
+                    step[-1] = np.minimum(step[-1], xn*9) #what does this do?
+                    step[-1] = np.maximum(step[-1], -xn*0.9)
+                    xn += step[-1]
+                    break
             i = i+1
         return n, xn
 
@@ -229,9 +257,12 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid, xn0):
             F, jac = get_F(n, Sbase, xn, cache, lnSn, returnjac=True)
             Farr.append(np.max(np.abs(F)))
             step = np.linalg.solve(jac, -F)
+
+            #cwo: what is this?
             if np.max(np.abs(step/np.append(n, xn)))<1e-13:
                 flagsingle = -2
                 break
+
             n, xn = newn(step, n, xn)
             
             # when iterate for too long, break it
@@ -295,6 +326,9 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid, xn0):
         elif flagsingle == -1 and SR[:, i].sum()>10:    # update Sfail if necessary
             Sfail = np.minimum(Sfail, SR[:, i].sum())
 
+        print(f'\r[init]grid point {i}/{len(Parr)} evaluates to status {flagsingle}   ', end="")
+    print()
+
     # TBD: When the supersaturation ratio is too high, the code becomes very slow, because it cost ~0.1s for each grid point. Why is that? How to get rid of it?
     # Continue: Maybe could do the similar thing as I did in the main code: control the relative error and absolute error
     # TBD: a more elegant way would be always trying until the status is not upgraded in one loop
@@ -346,7 +380,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid, xn0):
 
     return nsolid, xn
 
-def init(atmosphere, method):
+def init (atmosphere, method):
     '''
     Change by now: use atmosphere rather than Parr; don't use cache
     '''
