@@ -77,7 +77,13 @@ def myplot(Parr, y0, rhop, ncod, ngas, plotmode=0, **kwargs):
     ax = plt.gca()
     axs = ax.twiny()
 
-    axs.loglog(s*1e4, Parr/1e6, label='size', color=[0.7,0.7,0.7, 0.7], linewidth=3)    # divide by 1e6 to convert cgs to bar
+    xmax = np.max(y0)
+    xmin = xmax/1e7
+
+    #only plot where we have a cloud 
+    ii = y0[:ncod].sum(0)>xmin
+
+    axs.loglog(s[ii]*1e4, Parr[ii]/1e6, label='size', color=[0.7,0.7,0.7, 0.7], linewidth=3)    # divide by 1e6 to convert cgs to bar
 
     # select certain species
     if 'gasplot' in kwargs.keys():
@@ -103,15 +109,15 @@ def myplot(Parr, y0, rhop, ncod, ngas, plotmode=0, **kwargs):
     l, = ax.loglog(y0[-1], Parr/1e6, label='nuclei', color='k')
     lnarr.append(l)
 
+
     labs = [x.get_label() for x in lnarr]
 
     ax.set_xlabel('Mass concentration')
     ax.set_ylabel('Pressure (bar)')
     axs.set_xlabel(r'Particle size ($\mu$m)', color='grey')
 
-    xmax = np.max(y0)
     apmax = np.max(s*1e4)
-    ax.set_xlim([xmax/1e7, xmax*1.5])
+    ax.set_xlim([xmin, xmax*1.5])
     axs.set_xlim([pars.an*1e4, apmax*1.5])
     ax.invert_yaxis()
     axs.tick_params(colors='grey', axis='x', which='both')
