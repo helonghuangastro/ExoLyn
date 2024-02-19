@@ -77,7 +77,7 @@ def myplot(Parr, y0, rhop, ncod, ngas, plotmode=0, **kwargs):
     ax = plt.gca()
     axs = ax.twiny()
 
-    xmax = np.max(y0)
+    xmax = np.nanmax(y0)
     xmin = xmax/1e7
 
     #only plot where we have a cloud 
@@ -116,7 +116,7 @@ def myplot(Parr, y0, rhop, ncod, ngas, plotmode=0, **kwargs):
     ax.set_ylabel('Pressure (bar)')
     axs.set_xlabel(r'Particle size ($\mu$m)', color='grey')
 
-    apmax = np.max(s*1e4)
+    apmax = np.nanmax(s*1e4)
     ax.set_xlim([xmin, xmax*1.5])
     axs.set_xlim([pars.an*1e4, apmax*1.5])
     ax.invert_yaxis()
