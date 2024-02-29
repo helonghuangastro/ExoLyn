@@ -212,7 +212,7 @@ def newy(matsol, y0, atmosphere, alpha=1, **kwargs):
     # maxincrease = np.minimum(maxincrease, 99*y0[:nvar, :-1])    # This line seems to be useless
     maxdecrease = np.minimum(maxdecrease, 0.99*y0[:nvar, :-1])
     dy = np.minimum(matsol,  maxincrease)
-    dy = np.maximum(matsol, -maxdecrease)
+    dy = np.maximum(dy, -maxdecrease)
 
     i = 0
     while True:
@@ -321,6 +321,7 @@ def adjust_upper(atmosphere, atmospheren, **kwargs):
     atmospheren.update_grid(logP, cache)
     atmosphere.update(ynew)
 
+    # Need more careful treatment. This '10' is arbitrary
     for i in range(10):
         relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
 
@@ -345,7 +346,6 @@ def relaxation(efun, dedy, atmosphere, alpha=1, fixxn=False, **kwargs):
     # calculate partial derivative matrix
     # The following matrix is shown in Figure 17.3.1, numerical recipe
     dEdymat = dedy(atmosphere, **kwargs)
-    # pdb.set_trace()
 
     # Bmat is shown in Figure 17.3.1, numerical recipe
     Bmat = -Emat

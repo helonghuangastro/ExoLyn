@@ -99,17 +99,17 @@ def E(atmosphere, **kwargs):
     exndif = edif(pref_dif, atmosphere.xn, dx) * fdif
     exnadv = eadv(pref_adv, atmosphere.xn, dx)
     exnsrc = get_exnsrc(pref_src, atmosphere.xn, atmosphere.cachegrid, t_coag_inv)
-    exnsrc = np.insert(exnsrc, 0, 0)
+    exnsrc[0] = 0
 
     # error for source terms
-    econ = (atmosphere.Sc * pref_src)[:, :-1]    # no source term for the boundary condition
+    econ = (atmosphere.Sc * pref_src)    # no source term for the boundary condition
     econ[:, 0] = 0
     excsrc = np.zeros((atmosphere.ncond, atmosphere.N-1))
     exvsrc = np.zeros((atmosphere.ngas, atmosphere.N-1))
     for i, reaction in enumerate(reactions):
         solidindex = reaction.solidindex
-        excsrc[solidindex] += econ[i]
-        exvsrc -= np.atleast_2d(reaction.gasst * mugas).T / mucond[solidindex] * econ[i]
+        excsrc[solidindex] += econ[i, :-1]
+        exvsrc -= np.atleast_2d(reaction.gasst * mugas).T / mucond[solidindex] * econ[i, :-1]
 
     # error for boundary condition
     excdif = np.hstack((pars.Kzz/pref_src[0] * rhoarr[0] * fdif * np.diff(xc[:, :2])/dx**2, excdif))
@@ -120,7 +120,7 @@ def E(atmosphere, **kwargs):
 
     exc = excdif + excadv + excsrc
     exv = exvdif + exvsrc
-    exn = exndif + exnadv + exnsrc
+    exn = exndif + exnadv + exnsrc[:-1]
 
     return np.vstack((exc, exv, exn))
 
@@ -173,19 +173,19 @@ def dEdy(atmosphere, **kwargs):
     # source terms
     Tarr = cache_grid.T_grid
     pref_src = cnt.kb * Tarr / (pars.mgas * pars.g)
-    econ = (atmosphere.Sc * pref_src)[:, :-1]    # no source term for the boundary condition
+    econ = (atmosphere.Sc * pref_src)    # no source term for the boundary condition
     econ[:, 0] = 0
     deltv = -0.5 * atmosphere.v_sed * fsed    # collision velocity due to sedimentation
     t_coag_inv = cal_t_coag_inv(atmosphere.ap, atmosphere.rho, atmosphere.np, cache_grid, deltv)
     exnsrc = get_exnsrc(pref_src, atmosphere.xn, cache_grid, t_coag_inv)
-    exnsrc = np.insert(exnsrc, 0, 0)
+    exnsrc[0] = 0
 
-    desrcdy = np.zeros((nvar, nvar, N-1))
+    desrcdy = np.zeros((nvar, nvar, N))
     for i in range(nvar):
         ynew = y0.copy()
         ynew[i] += dy[i]
         desrc = dEdysrc(atmosphere, ynew, pref_src, econ, exnsrc, **kwargs)
-        desrcdy[i] = desrc/dy[i, :-1]
+        desrcdy[i] = desrc/dy[i]
 
     # Analytically calculate dexnsrc/dxn
     ynew = y0.copy()
@@ -201,9 +201,9 @@ def dEdy(atmosphere, **kwargs):
     dexnsrcdxn = t_coag_inv + y0[-1]*dt_coag_invdxn
     dexnsrcdxn *= -pref_src * cache_grid.rho_grid
     dexnsrcdxn[0] = 0
-    desrcdy[-1, -1] = dexnsrcdxn[:-1]
+    desrcdy[-1, -1] = dexnsrcdxn
 
-    J[:, :, nvar:(2*nvar)] += np.swapaxes(desrcdy, 0, 2)
+    J[:, :, nvar:(2*nvar)] += np.swapaxes(desrcdy[:,:,:-1], 0, 2)
 
     return J
 
@@ -247,17 +247,17 @@ def dEdysrc(atmosphere, y1, pref_src, econ0, exnsrc0, **kwargs):
     deltvarr = -0.5 * v_sedarr * kwargs['fsed']    # collision velocity due to sedimentation
     t_coag_invarr = cal_t_coag_inv(aparr, rhop, n_parr, cache_grid, deltvarr)
     exnsrc = get_exnsrc(pref_src, xn, cache_grid, t_coag_invarr)
-    exnsrc = np.insert(exnsrc, 0, 0)
+    exnsrc[0] = 0
 
     # calculate new econ
     mugas = np.atleast_2d(atmosphere.chem.mugas).T
     mucond = atmosphere.chem.musolid
     Sc2 = cal_Sc_all(xv, aparr, n_parr, bs, atmosphere.chem, cache_grid)
-    econ = (Sc2 * pref_src)[:, :-1]    # no source term for the boundary condition
+    econ = (Sc2 * pref_src)    # no source term for the boundary condition
     econ[:, 0] = 0
 
-    dexcsrc = np.zeros((ncond, atmosphere.N-1))
-    dexvsrc = np.zeros((ngas, atmosphere.N-1))
+    dexcsrc = np.zeros((ncond, len(xn)))
+    dexvsrc = np.zeros((ngas, len(xn)))
     dexnsrc = exnsrc - exnsrc0
 
     decon = econ-econ0
@@ -282,7 +282,7 @@ def eadv(pref_adv, xc, dx):
 def get_exnsrc(pref_src, xn, cache, t_coag_inv):
     Snarr = cache.Sn_grid
     rhoarr = cache.rho_grid
-    return pref_src[1:-1] * (Snarr - xn*rhoarr*t_coag_inv)[1:-1]
+    return pref_src * (Snarr - xn*rhoarr*t_coag_inv)
 
 def cal_Mn(P):
     return -pars.nuc_pro/2*(1-erf(-np.log(P/pars.P_star)/(np.sqrt(2)*pars.sigma_nuc)))

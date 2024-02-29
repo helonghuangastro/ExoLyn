@@ -115,16 +115,16 @@ def condnewtonold(Parr, reactions, cache, nu, muv, murc, xn):
 
     return nsolid
 
-def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
+def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
     '''
     Using Newton-Raphson method to calculate equilibrium concentration
     '''
-    def get_F(n, Sbase, cache, returnjac=False):
+    def get_F(n, xvi, Sbase, cache, returnjac=False):
         '''
         get residual function (maybe also Jacobian) of ln(S/bs)
         the last element is the residual for equation of nuclei ln(Sn*tcoag/xn/rhogas)
         '''
-        xvleft = xvb - np.matmul(n, nu)*muv    # a vector with n_v length
+        xvleft = xvi - np.matmul(n, nu)*muv    # a vector with n_v length
         nulogxv = np.sum(nu * np.log(xvleft), axis=1) # a vector with xr length
         # xtot = xn + np.sum(n * murc/rhorel)    # a scalar
         xtot = np.sum(n * murc/rhorel)    # a scalar
@@ -172,9 +172,9 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         else:
             return F
 
-    def flag(n):
+    def flag(n, xvi):
         ''' check whether the solution is acceptable'''
-        xvleft = xvb - np.matmul(n, nu)*muv
+        xvleft = xvi - np.matmul(n, nu)*muv
         #cwo: this is per definition satisfied now
         xcflag = True
         if (xvleft<=0.).any():#cwo: why "<="?
@@ -183,7 +183,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
             xvflag = True
         return xcflag, xvflag
 
-    def newn(step, n):
+    def newn(step, n, xvi):
         ''' From the step and n and xn, find the new n '''
 
         #[24.02.01]cwo:calculate initial i
@@ -195,7 +195,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
             kmin = 0
         else:
             imin = max(0, int(max(-np.log(-n[ii]/step[ii])/np.log(2))))
-            dum1 = xvb /muv -(n@nu)
+            dum1 = xvi /muv -(n@nu)
             dum2 = step@nu
             karr = np.where(dum1/dum2>0,-np.log(dum1/dum2)/np.log(2),0)
             kmin = max(0, int(max(karr)))
@@ -205,9 +205,9 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         i = max(imin,kmin)
         while(True):
             nnew = n+step/2**i
-            xvleft = xvb - np.matmul(nnew, nu)*muv
+            xvleft = xvi - np.matmul(nnew, nu)*muv
             if (nnew>0.).all():
-                xcflag, xvflag= flag(nnew)
+                xcflag, xvflag= flag(nnew, xvi)
                 if xcflag and xvflag:
                     #here we can check my assertion if we start w/ "i=0"
                     #assert(i>=imin)
@@ -218,24 +218,24 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
             i = i+1
         return n
 
-    def newton(Sbase, iniguess, cache):
+    def newton(xvi, Sbase, iniguess, cache):
         ''' Use Newton method to get the supersaturation ratio at one location'''
         inin = iniguess
         while True:    # Reduce initial guess if it is not proper
-            xvleft = xvb - np.matmul(inin, nu)*muv
+            xvleft = xvi - np.matmul(inin, nu)*muv
             if (xvleft>0).all():
                 break
             else:
                 inin /= 2    # changed 20230904
 
         n = inin
-        F = get_F(n, Sbase, cache)
+        F = get_F(n, xvi, Sbase, cache)
         j = 0
         flagsingle = 0    # flag for the status of finding initial state: 0 for success; -1 for exceed maximum iteration; -2 for step becomes too samll
         Farr = []
         while(np.max(np.abs(F))>0.01):
             # TBD: one way to accelerate is that once n.sum() >> xn, only calculate xn and check whether n.sum() >> xn still satisfies. In this way, less iteration of j may be needed.
-            F, jac = get_F(n, Sbase, cache, returnjac=True)
+            F, jac = get_F(n, xvi, Sbase, cache, returnjac=True)
             Farr.append(np.max(np.abs(F)))
             step = np.linalg.solve(jac, -F)
 
@@ -244,7 +244,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
                 flagsingle = -2
                 break
 
-            n = newn(step, n)
+            n = newn(step, n, xvi)
             
             # when iterate for too long, break it
             j += 1
@@ -256,13 +256,13 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
 
     rhorel = rhosolid/pars.rho_int
 
-    xvb = pars.xvb
+    # xvb = pars.xvb
     nsolid = np.zeros((len(reactions), len(Parr)))
     Sbase = cachegrid.Sbase_grid
     iniguess = 1e-6*np.ones(len(reactions))
 
-    nulogxv = np.sum(nu * np.log(xvb), axis=1) # a vector with xr length
-    SR = Sbase * np.atleast_2d(np.exp(nulogxv)).T    # super saturation ratio for cloud base
+    nulogxv = np.matmul(nu, np.log(xv)) # a matrix of (xr, ngas) length
+    SR = Sbase * np.exp(nulogxv)    # super saturation ratio for cloud base
     status = np.ones_like(Parr) * 100    # save the status of finding initial condition: 0 for success; -1 and -2 for fail; 100 for not done now
     Sfail = np.inf
     clearidx = np.where(SR.sum(axis=0)<1)[0]    # where the atmosphere is clear, without condensation
@@ -279,7 +279,7 @@ def condnewton(Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         # if S is too large, skip newton iteration
         # TBD: This is not directly solving the problem, need to think of a way to solve it
         try:
-            flagsingle, result = newton(Sbase[:, i], iniguess, cachegrid[i])
+            flagsingle, result = newton(xv[:, i], Sbase[:, i], iniguess, cachegrid[i])
         except (TypeError, np.linalg.LinAlgError):
             flagsingle = -1
 
@@ -369,13 +369,13 @@ def init (atmosphere, method):
         y0[ncod+i] = pars.xvb[i]
 
     # try to find initial nuclei concentration by eliminating the source term
-    if hasattr(pars, 'TPmode') and pars.TPmode=='interp':
-        TPdata = np.genfromtxt(pars.TPfile, names=True, deletechars='', comments='#')
-        logP_ref = np.log10(TPdata['P_ref'])
-        T_ref = TPdata['T_ref']
-    else:
-        logP_ref = np.log10(Parr)
-        T_ref = funs.TP(Parr)
+    # if hasattr(pars, 'TPmode') and pars.TPmode=='interp':
+    #     TPdata = np.genfromtxt(pars.TPfile, names=True, deletechars='', comments='#')
+    #     logP_ref = np.log10(TPdata['P_ref'])
+    #     T_ref = TPdata['T_ref']
+    # else:
+    #     logP_ref = np.log10(Parr)
+    #     T_ref = funs.TP(Parr)
     # def dxndlogP(logP):
     #     ''' calculate xn derivative to logP '''
     #     P = np.exp(logP)
@@ -393,7 +393,7 @@ def init (atmosphere, method):
         nsolid = condscipy(Parr, reactions, cache, nu, muv, murc, y0[-1])
     if method=='Newton':
         # My Newton method to calculate the equilibrium concentration of solids.
-        nsolid, xn = condnewton(Parr, reactions, atmosphere.cachegrid, nu, muv, murc, rhosolid)
+        nsolid, xn = condnewton(y0[ncod:(ncod+ngas)], Parr, reactions, atmosphere.cachegrid, nu, muv, murc, rhosolid)
     elif method=='half':
         nsolid = condbis(Parr, reactions, cache, nu, muv)
     elif method=='gold':
