@@ -21,7 +21,8 @@ class chemdata():
         self.solidindex = np.array([solidlist.index(reaction.solid) for reaction in self.reactions])
         self.gasst = np.array([reaction.gasst for reaction in self.reactions])    # gas stoichemics for all reactions
         pars.solid = solidlist
-        
+        self.gibbsfitcoeffs = self.readgibbsfit(gibbsfitfile=pars.rootdir+'tables/gibbsfit.txt')
+
         self.rhosolid = self.readrho()
         return
 
@@ -119,6 +120,38 @@ class chemdata():
         rhosolid = np.array([densitydict[solid] for solid in pars.solid])
         return rhosolid
  
+    def readgibbsfit(self, gibbsfitfile):
+        ''' read the fitting coefficient for the gibbs energy '''
+        gibbsfitcoeffs = {}
+        allfitmoles = {}
+        # read every line in the gibbs fit file
+        with open(gibbsfitfile, 'r') as ipt:
+            lines = ipt.readlines()
+        
+        # read the name of molecules that have fitting results
+        for i, line in enumerate(lines):
+            allfitmoles[line.strip().split(' ')[0]] = i
+
+        # read the fitting result for the molecules
+        for mole in self.molecules.keys():
+            if mole in allfitmoles.keys():
+                linelist = lines[allfitmoles[mole]].strip().split(' ')    # split the line
+                # in some cases, need gasphase Gibbs energy to fit the solid phase ones.
+                if linelist[1]=='3' or linelist[1]=='6':
+                    gasmole = mole.strip('(s)')
+                    if gasmole in allfitmoles.keys():
+                        linelistgas = lines[allfitmoles[gasmole]].strip().split(' ')
+                        coefflistgas = [int(linelistgas[1])]
+                        for i in range(2, len(linelistgas)):
+                            coefflistgas.append(float(linelistgas[i]))
+                        gibbsfitcoeffs[gasmole] = coefflistgas
+                coefflist = [int(linelist[1])]       # fitting coefficient, the first one is the fit fomular
+                for i in range(2, len(linelist)):
+                    coefflist.append(float(linelist[i]))
+                gibbsfitcoeffs[mole] = coefflist
+
+        return gibbsfitcoeffs
+
 class reaction():
     def __init__(self, reactant, product, solid):
         self.reactant = reactant
