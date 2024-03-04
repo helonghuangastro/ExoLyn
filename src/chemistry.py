@@ -2,6 +2,7 @@ import numpy as np
 import constants as cnt
 import pdb
 import parameters as pars
+import os
 
 class chemdata():
     def __init__(self, gibbs_file):
@@ -21,7 +22,7 @@ class chemdata():
         self.solidindex = np.array([solidlist.index(reaction.solid) for reaction in self.reactions])
         self.gasst = np.array([reaction.gasst for reaction in self.reactions])    # gas stoichemics for all reactions
         pars.solid = solidlist
-        self.gibbsfitcoeffs = self.readgibbsfit(gibbsfitfile=pars.rootdir+'tables/gibbsfit.txt')
+        self.gibbsfitcoeffs = self.readgibbsfit(gibbsfitfile=os.path.join(pars.rootdir,'tables/gibbsfit.txt'))
 
         self.rhosolid = self.readrho()
         return
