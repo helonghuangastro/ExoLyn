@@ -6,13 +6,42 @@ import subprocess as sp
 # import signal
 def writepars():
     with open('parameters.txt', 'w') as opt:
-        opt.write('opa_IR = 0.3\n')
+        rn = np.random.rand()
+        opt.write('T_star = ' + str(T_star_range[0]*(1-rn)+T_star_range[1]*rn) + '\n')
+        opt.write('R_star = cnt.R_sun\n')
+        opt.write('\n')
+
+        opt.write('Rp = 1.087 * cnt.Rj\n')
+        opt.write('rp = 0.05 * cnt.au\n')    # TBD: This can be changed
         rn = np.random.rand()    # rn stands for random number
         opt.write('g = ' + str(g_range[0]**(1-rn)*g_range[1]**rn) + '\n')
+        opt.write('\n')
+
+        opt.write('runname = \'\'\n')
+        opt.write('rootdir = \'../\'\n')
+        opt.write('gibbsfile = rootdir + \'tables/gibbs_test.txt\'\n')
+        opt.write('suppresswarnings = \'all\'')
+        opt.write('\n')
+
+        opt.write('verbose = \'silent\'\n')
+        opt.write('plotmode = \'none\'\n')
+        opt.write('writeoutputfile = False\n')
+        opt.write('\n')
+
+        opt.write('N = 100\n')
+        opt.write('Pa = 1.\n')
+        opt.write('Pb = 1e7\n')
+        opt.write('Pref = 1e6\n')
+        opt.write('autoboundary = True\n')
+        opt.write('\n')
+
+        opt.write('opa_IR = 0.3\n')
         opt.write('firr = 1 / 4\n')
         opt.write('opa_vis_IR = 0.158\n')
         rn = np.random.rand()
         opt.write('T_int = ' + str(T_int_range[0]**(1-rn)*T_int_range[1]**rn) + '\n')
+        opt.write('\n')
+
         opt.write('mgas = 2.34 * cnt.mu\n')
         rn = np.random.rand()
         opt.write('Kzz = ' + str(Kzz_range[0]**(1-rn)*Kzz_range[1]**rn) + '\n')
@@ -21,6 +50,7 @@ def writepars():
         opt.write('\n')
 
         opt.write('f_stick = 1.\n')
+        opt.write('f_coag = 1.\n')
         opt.write('cs_com = 8e-15\n')
         opt.write('rho_int = 2.8\n')
         opt.write('an = 1e-7\n')    # TBD: This can also be discussed
@@ -41,29 +71,8 @@ def writepars():
             xvb.append(xvb0[i]*10**(2*rnarr[i]-1))
         opt.write('xvb = ' + str(xvb))
         opt.write('\n')
-        opt.write('gibbsfile = \'./gibbs.txt\'\n')
-        opt.write('\n')
 
-        rn = np.random.rand()
-        opt.write('T_star = ' + str(T_star_range[0]*(1-rn)+T_star_range[1]*rn) + '\n')
-        opt.write('R_star = cnt.R_sun\n')
-        opt.write('\n')
-
-        opt.write('Rp = 1.087 * cnt.Rj\n')
-        opt.write('rp = 0.05 * cnt.au\n')    # TBD: This can be changed
-        opt.write('\n')
-
-        opt.write('N = 700\n')
-        opt.write('Pa = 1.\n')
-        opt.write('Pb = 1e7\n')
-        opt.write('Pref = 1e6\n')
-        opt.write('autoboundary = True\n')
-        opt.write('\n')
-
-        opt.write('verbose = \'silent\'\n')
-        opt.write('plotmode = \'none\'\n')
-        opt.write('writeoutputfile = False\n')
-        opt.write('suppresswarnings = \'all\'')
+        opt.write('calcoptical = False')
         opt.write('\n')
 
         opt.write('============ put reactions here =============\n')
@@ -83,7 +92,7 @@ def writepars():
 
 solid = ['MgSiO3', 'Mg2SiO4', 'SiO2', 'MgO', 'FeO', 'Fe2O3', 'FeS', 'Fe', 'TiO2', 'Al2O3']
 gas = ['Mg', 'SiO', 'H2O', 'Fe', 'H2S', 'TiO', 'Al']
-xvb0 = [7.56e-4, 1.32e-3, 1e-3, 1e-3, 8e-4, 1e-5, 7e-5]
+xvb0 = [4.1e-4, 6.1e-4, 1.4e-3, 7.6e-4, 1.9e-4, 2.4e-6, 3.2e-5]
 
 g_range = [250, 25000]
 T_int_range = [300, 1000]
@@ -100,7 +109,7 @@ T_star_range = [3000, 8000]
 failcount = 0
 totaltime = 0
 succtime = 0
-N = 500
+N = 100
 for i in range(N):
     print(i)
 
@@ -112,7 +121,7 @@ for i in range(N):
 
     starttime = time.time()
     #isfail = os.system("python3 ../relaxation.py ./parameters.txt")
-    out = sp.run(['python3', '../relaxation.py', './parameters.txt'])
+    out = sp.run(['python3', '../src/relaxation.py', './parameters.txt'])
     isfail = out.returncode
 
     endtime = time.time()

@@ -150,7 +150,7 @@ folder = os.path.join(pars.rootdir,'tables/nk/')
 datadict = {'MgSiO3':'MgSiO3_amorph_sol-gel.dat', 'Mg2SiO4':'Mg2SiO4_amorph_sol-gel.dat',
             'SiO2':'SiO2_amorph.dat', 'MgO':'MgO.dat', 'FeO':'FeO.dat', 'FeS':'FeS.dat',
             'Fe2O3':'Fe2O3.dat', 'Fe':'Fe.dat', 'TiO2':'TiO2_anatase.dat', 'Al2O3':'Al2O3.dat',
-            'KCl':'KCl.dat', 'NaCl':'NaCl.dat', 'ZnS':'ZnS.dat'}
+            'KCl':'KCl.dat', 'NaCl':'NaCl.dat', 'ZnS':'ZnS.dat', 'Na2S':'Na2S.dat'}
 files = datadict.values()
 
 # wavelength (micron) of interest

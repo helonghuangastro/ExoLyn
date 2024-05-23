@@ -14,3 +14,5 @@ NH3 0.87
 NaCl 2.17
 KCl 1.99
 ZnS 4.09
+Na2S 1.86
+NH4Cl 1.53

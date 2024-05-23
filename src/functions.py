@@ -521,6 +521,18 @@ def gibbsfit(chem, mole, T):
             else:
                 a0, a1, a2, a3, a4 = coeff
                 gibbsfit = gibbsgas + cnt.R * (a0 + a1*T + a2*T*np.log(T) + a3*T**2 + a4*T**3)
+        elif Nexp == 8:
+            pdb.set_trace()
+            molegas = mole.strip('(s)')
+            try:
+                gibbsgas = gibbsfit(chem, molegas, T)    # in J
+            except:
+                print(f'[funcs.gibbsfit]WARNING: You are fitting gibbs energy of {mole} with formular 8, \
+                which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
+                dofit = False    # cannot get the gas phase gibbs energy
+            else:
+                a0, a1, a2 = coeff
+                gibbsfit = gibbsgas + cnt.R * (a0*T + a1 + a2/T)
 
     # cannot find the gibbs energy
     if (not dofit) and (not doint):

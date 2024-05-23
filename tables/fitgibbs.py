@@ -49,6 +49,15 @@ def fitfuncs6(T, coeffs, gibbsgas):
     Gf = gibbsgas + R * (a0 + a1*T + a2*T*np.log(T) + a3*T**2 + a4*T**3)
     return Gf
 
+def fitfuncs8(T, coeffs, gibbsgas):
+    '''
+    fitting function for the solid phase gibbs energy, expresssion 6 in GGChem paper
+    G_f(solid)-G_f(gas) = R(c0 + c1*T + c2*T*logT + c3*T^2 + c4*T^3)
+    '''
+    a0, a1, a2 = coeffs
+    Gf = gibbsgas + R * (a0 + a1/T + a2/T**2)
+    return
+
 def gibbsfit(gibbsfile, expressiondict, outputfile=None, isplot=False):
     gibbsdata = np.genfromtxt(gibbsfile, names=True, deletechars=" !#$%&'*+, -./:;<=>?@[\\]^{|}~")
 
@@ -142,16 +151,25 @@ def gibbsfit(gibbsfile, expressiondict, outputfile=None, isplot=False):
                 line = line + '\n'
                 opt.write(line)
                 i = i+1
+            for mole, fitcoeff in addexpressiondict.items():
+                line = mole + ' '
+                for coeff in fitcoeff:
+                    line = line + str(coeff) + ' '
+                line = line + '\n'
+                opt.write(line)
 
     return coeff
 
 fitdict = {'H2O':0, 'Na':0, 'TiO':0, 'H2':0, 'H2S':0, 'K':0,
             'SiO':0, 'Zn':0, 'Al':0, 'Fe':0, 'Ca':0, 'Mg':0,
             'FeS':0, 'KCl':0, 'TiO2':0, 'SiO2':0, 'MgO':0, 
-            'HCl':0, 'NaCl':0, 'FeO':0,
+            'HCl':0, 'NaCl':0, 'FeO':0, 'NH3':0,
             'MgSiO3(s)':2, 'Mg2SiO4(s)':2, 'TiO2(s)':3, 'SiO2(s)':3, 
             'Fe(s)':3, 'FeS(s)':3, 'FeO(s)':3, 'MgO(s)':3, 'TiO(s)':3,
-            'NaCl(s)':3, 'KCl(s)':3, 'Al2O3(s)':5, 'Fe2O3(s)':5, 'H2O(s)':6}
+            'NaCl(s)':3, 'KCl(s)':3, 'Al2O3(s)':5, 'Fe2O3(s)':5, 'H2O(s)':6, 
+            'Na2S(s)':2}
+
+addexpressiondict = {'NH3(s)': [8, 10.53, -2161, -86594]}
 
 coeff = gibbsfit('gibbs_test.txt', fitdict, outputfile='gibbsfit.txt', isplot=False)
 # coeff = gibbsfit('gibbs_test.txt', {'ZnS(s)':5}, outputfile=None, isplot=True)

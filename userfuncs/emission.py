@@ -48,7 +48,7 @@ rhop = atmosphere.rho
 chem = atmosphere.chem
 # other interesting species and their concentration
 extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
-extragascon = np.array([8e-3, 1, 0.33, 0, 0])
+extragascon = np.array([3.2e-3, 1, 0.33, 0, 0])
 # all of the gas molecules to be considered in the spectrum calculation
 gasmols = []
 for gasname in extragas + pars.gas:
@@ -136,6 +136,7 @@ for j in range(len(Parr)):
 # plot the atmosphere after equilibrium chemistry calculation
 ynew = np.vstack((y[:ncod], ygasnew[len(extragas):], y[-1]))
 myplot(Parr, ynew, rhop, ncod, ngas, plotmode='popup')
+plt.clf()
 # pdb.set_trace()
 
 ########### calculate or read oopacity #########
@@ -143,9 +144,11 @@ ap = atmosphere.ap
 n_p = atmosphere.np
 rhog = cachegrid.rho_grid
 if kappafolder == None:
+    from calmeff import cal_eff_m_all, writelnk
+    from calkappa import cal_opa_all
     # calculate effective refractory index
     bs = atmosphere.bs
-    wlenkappa = np.logspace(0, np.log10(20), 100)
+    wlenkappa = np.logspace(np.log10(0.5), np.log10(20), 100)
     mmat = cal_eff_m_all(bs, pars.solid, wlenkappa)
     writelnk(mmat, wlenkappa, rhop, folder='meff')
 
@@ -172,7 +175,7 @@ spabs = RectBivariateSpline(wlenkappa, Parrbar, kappadataabs)
 # sys.exit()
 
 ####### Radiation transfer part #######
-wlenrange = [1, 20]
+wlenrange = [0.5, 20]
 # cloud opacity function
 def cloud_opas(spobj):
     ''' return cloud opacity (cm^2/g)
@@ -279,7 +282,6 @@ flux = np.vstack((flux, atmosphere.flux*fconvert))
 labels.append(l.get_label())
 
 # calculate cloudy atmosphere
-# atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, P0_bar=P0, radius=radius, sigma_lnorm=sigma_lnorm)
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
 
 l, = plt.plot(nc.c/atmosphere.freq/1e-4, atmosphere.flux*fconvert, label='cloudy', linewidth=3)
@@ -288,6 +290,7 @@ labels.append(l.get_label())
 
 plt.legend()
 plt.xscale('log')
+plt.yscale('log')
 plt.xlabel('Wavelength (microns)')
 plt.ylabel(r'Planet flux $F_\nu$ (W m$^{-2}$ $\mu m^{-1}$)')
 ax = plt.gca()

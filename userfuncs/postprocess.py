@@ -28,7 +28,7 @@ def write_element(elementgrid):
             opt.write(element + ' ' + str(abundance) + '\n')
 
 ########### reconstruct the atmosphere object ###########
-gridfile = 'gridCO3.txt'
+gridfile = 'grid.txt'
 kappafolder = 'coeff/'
 # kappafolder = None
 from read import reconstruct
@@ -48,7 +48,9 @@ rhop = atmosphere.rho
 chem = atmosphere.chem
 # other interesting species and their concentration
 extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
-extragascon = np.array([8e-3, 1, 0.33, 0, 0])
+# extragascon = np.array([1.3e-3, 1, 0.33, 0, 0])    # for CtoO /= 3
+extragascon = np.array([3.2e-2, 1, 0.33, 0, 0])    # for metallicity *= 10
+# extragascon = np.array([3.2e-3, 1, 0.33, 0, 0])
 # all of the gas molecules to be considered in the spectrum calculation
 gasmols = []
 for gasname in extragas + pars.gas:
@@ -143,9 +145,11 @@ ap = atmosphere.ap
 n_p = atmosphere.np
 rhog = cachegrid.rho_grid
 if kappafolder == None:
+    from calmeff import cal_eff_m_all, writelnk
+    from calkappa import cal_opa_all
     # calculate effective refractory index
     bs = atmosphere.bs
-    wlenkappa = np.logspace(0, np.log10(20), 100)
+    wlenkappa = np.logspace(np.log10(0.5), np.log10(20), 100)
     mmat = cal_eff_m_all(bs, pars.solid, wlenkappa)
     writelnk(mmat, wlenkappa, rhop, folder='meff')
 
@@ -167,7 +171,7 @@ spobj = RectBivariateSpline(wlenkappa, Parrbar, kappadata)
 # sys.exit()
 
 ####### Radiation transfer part #######
-wlenrange = [1, 20]
+wlenrange = [0.5, 20]
 # cloud opacity function
 def cloud_opas(spobj):
     ''' return cloud opacity (cm^2/g)
@@ -281,7 +285,7 @@ plt.xscale('log')
 plt.xlabel('Wavelength (microns)')
 plt.ylabel(r'Transit depth (\%)')
 ax = plt.gca()
-ax.set_xlim([1, 20])
+ax.set_xlim([0.5, 20])
 #get x and y limits
 x_left, x_right = ax.get_xlim()
 y_low, y_high = ax.get_ylim()
