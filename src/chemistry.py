@@ -6,28 +6,39 @@ import os
 
 class chemdata():
     def __init__(self, gibbs_file):
-        self.gibbsdata = np.genfromtxt(gibbs_file, names=True, deletechars='', comments='#')
-        self.mollist = []    # name of all molecules
-        self.molecules = {}    # store all the molecular data
-        self.reactions = self.get_reaction(pars.parafilename)
+        # read the reactions and molecules
+        self.read_reaction(pars.parafilename)
         self.addgasmolecule(pars.gas)
-        self.mugas = np.array([self.molecules[gas].mu for gas in pars.gas])
-        for reaction in self.reactions:
-            reaction.cal_dG(self.gibbsdata, self.molecules)
+
+        # set the properties for solid species
         solidlist = [molename.strip('(s)') for molename in self.mollist if molename.endswith('(s)')]    # all the solid that appear in the reactions
-        self.reactionidx = [self.molecules[solid+'(s)'].reactionidx for solid in solidlist]    # the index of reaction that correspond to each solid
         self.musolid = np.array([self.molecules[solid+'(s)'].mu for solid in solidlist])    # the molecular weight for each solid
+        self.reactionidx = [self.molecules[solid+'(s)'].reactionidx for solid in solidlist]    # the index of reaction that correspond to each solid
+        pars.solid = solidlist
+        self.rhosolid = self.readrho()
+
+        # set the properties for the gas
+        self.mugas = np.array([self.molecules[gas].mu for gas in pars.gas])
+        self.gasst = np.array([reaction.gasst for reaction in self.reactions])    # gas stoichemics for all reactions
+        
+        # set the properties for the reactions
         for reaction in self.reactions:
             reaction.solidindex = solidlist.index(reaction.solid)    # the index of solid in the solidlist
         self.solidindex = np.array([solidlist.index(reaction.solid) for reaction in self.reactions])
-        self.gasst = np.array([reaction.gasst for reaction in self.reactions])    # gas stoichemics for all reactions
-        pars.solid = solidlist
-        self.gibbsfitcoeffs = self.readgibbsfit(gibbsfitfile=os.path.join(pars.rootdir,'tables/gibbsfit.txt'))
 
-        self.rhosolid = self.readrho()
+        # read gibbs coeffecient data
+        gibbsdata = np.genfromtxt(gibbs_file, names=True, deletechars='', comments='#')
+        self.gibbsTref = gibbsdata['Tref']
+        self.add_gibbs(gibbsdata, self.molecules)
+        self.gibbsfitcoeffs = self.readgibbsfit(gibbsfitfile=os.path.join(pars.rootdir,'tables/gibbsfit.txt'))
+        for reaction in self.reactions:
+            reaction.cal_dG(self.molecules, self.gibbsTref)
+
         return
 
-    def get_reaction(self, filename):
+    def read_reaction(self, filename):
+        mollist = []
+        molecules = {}
         reactions = []
         i = 0
         with open(filename, 'r') as ipt:
@@ -63,15 +74,15 @@ class chemdata():
                     # seperate st and molecular term
                     st, moleterm = get_mole(equaterm)
                     # add the molecule to the class
-                    if moleterm not in self.mollist:
+                    if moleterm not in mollist:
                         if moleterm.endswith('(s)'):
                             mole = solidmol(moleterm)
                         else:
                             mole = molecule(moleterm)
-                        self.mollist.append(moleterm)
-                        self.molecules[moleterm] = mole
+                        mollist.append(moleterm)
+                        molecules[moleterm] = mole
                     else:
-                        mole = self.molecules[moleterm]
+                        mole = molecules[moleterm]
 
                     if mole.solid:
                         solid = mole.name
@@ -93,7 +104,11 @@ class chemdata():
                 reactions.append(readreaction)
                 i += 1
 
-            return reactions
+        self.reactions = reactions
+        self.mollist = mollist
+        self.molecules = molecules
+
+        return
 
     def addgasmolecule(self, gasmollist):
         ''' Add gas molecules that's not in the reaction, but in the parameter file '''
@@ -101,6 +116,15 @@ class chemdata():
             if gasname not in self.molecules:
                 mole = molecule(gasname)
                 self.molecules[gasname] = mole
+        return
+
+    def add_gibbs(self, gibbsdata, molecules):
+        ''' Add gibbs data to the molecule class '''
+        MoleWithGibbs = gibbsdata.dtype.names
+        for molename in molecules:
+            if molename in MoleWithGibbs:
+                molecules[molename].hasgibbs = True
+                molecules[molename].gibbs = gibbsdata[molename]
         return
 
     def readrho(self):
@@ -174,21 +198,33 @@ class reaction():
                 self.gasst[i] = -self.product[gas]
         return
 
-    def cal_dG(self, moldata, molecules):
+    def cal_dG(self, molecules, Tref):
         delG = 0
         netnu = 0
         munu = 1
+
+        nogibbs = False    # any molecule has no gibbs data
+
         for molename, st in self.product.items():
-            delG += moldata[molename]*st
+            if molecules[molename].hasgibbs:
+                delG += molecules[molename].gibbs*st
+            else:
+                nogibbs = True
             if molename.strip('(s)')!=self.solid:
                 netnu -= st
                 munu /= molecules[molename].mu**st
         for molename, st in self.reactant.items():
-            delG -= moldata[molename]*st
+            if molecules[molename].hasgibbs:
+                delG -= molecules[molename].gibbs*st
+            else:
+                nogibbs = True
             netnu += st
             munu *= molecules[molename].mu**st    # this is defined as mu**nu, which will be used in the Sbase later
 
         delG *= 1e3    # Now the unit is J, consistent with unit of R (ideal gas const.)
+
+        if nogibbs:
+            delG = np.array(len(Tref) * [np.nan])
 
         self.delG = delG
         self.netnu = netnu
@@ -201,6 +237,8 @@ class molecule():
         self.name = moleterm.strip('(s)')
         self.solid = moleterm.endswith('(s)')
         self.element = {}    # the dictionary storing how many atoms each element is in the molecule
+        self.hasgibbs = False       # whether this molecule has gibbs data
+        self.hasgibbsfit = False    # whether this molecule has gibbs fit coeffecient
 
         molename = moleterm.strip('(s)')
         while molename!='':
@@ -235,6 +273,103 @@ class solidmol(molecule):
     def addindex(self, reactionidx):
         self.reactionidx.append(reactionidx)
         return
+
+def cal_gibbs(chem, mole, T):
+    '''
+    get the gibbs energy of one species by fitting or extrapolating Gibbs energy
+    I feel that this function can be combined with the above function
+    '''
+    doint = False    # whether we interpolate
+    dofit = False    # whether we fit
+    isext = False    # whether the interpolate extrapolate
+    # if T within valid temperature of JANAF table, just interpolate
+    if chem.molecules[mole].hasgibbs:
+        doint = True
+    else:
+        dofit = False
+
+    # first interpolate
+    if doint:
+        gibbsref = chem.molecules[mole].gibbs * 1e3
+        idxvalid = ~np.isnan(gibbsref)
+        gibbsref = gibbsref[idxvalid]
+        Tref = chem.gibbsTref[idxvalid]
+        gibbs = np.interp(T, Tref, gibbsref)
+
+        # find the temperature where extrapolate
+        idxext = (T<np.min(Tref)) | (T>np.max(Tref))
+        if (idxext==True).any():
+            isext = True
+
+    # when extrapolate or the gibbs energy not in the table, using fit expression
+    if (doint and isext) or (not doint):    # NEED to fit
+        if (mole in chem.gibbsfitcoeffs.keys()):    # ABLE to fit
+            dofit = True
+        else:
+            dofit = False
+
+    # if has the fitting formular of mole and extrapolate, use the fitting formular
+    if dofit:
+        coefflist = chem.gibbsfitcoeffs[mole]
+        Nexp = coefflist[0]
+        coeff = coefflist[1:]
+        # fitting formular 0
+        if Nexp == 0:
+            a1, a2, a3, a4 = coeff
+            gibbsfit = cnt.R*T*(a1*np.log(T) + a2 + a3*T + a4*T**2)
+        elif Nexp == 2:
+            a0, a1, a2, a3, a4 = coeff
+            gibbsfit = a0/T + a1 + a2*T + a3*T**2 + a4*T**3
+            gibbsfit *= 1e3    # convert the unit to J
+        elif Nexp == 3:
+            molegas = mole.strip('(s)')
+            try:
+                gibbsgas = cal_gibbs(chem, molegas, T)    # in J
+            except:
+                print(f'[funcs.cal_gibbs]WARNING: You are fitting gibbs energy of {mole} with formular 3, \
+                which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
+                dofit = False    # cannot get the gas phase gibbs energy
+            else:
+                a0, a1, a2, a3, a4 = coeff
+                gibbsfit = gibbsgas + cnt.R * (a0 + a1*T + a2*T**2 + a3*T**3 + a4*T**4)
+        elif Nexp == 5:
+            a0, a1, a2, a3, a4 = coeff
+            gibbsfit = cnt.R*(a0 + a1*np.log(T)*T + a2*T + a3*T**2 + a4*T**3)
+        elif Nexp == 6:
+            molegas = mole.strip('(s)')
+            try:
+                gibbsgas = gibbsfit(chem, molegas, T)    # in J
+            except:
+                print(f'[funcs.cal_gibbs]WARNING: You are fitting gibbs energy of {mole} with formular 6, \
+                which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
+                dofit = False    # cannot get the gas phase gibbs energy
+            else:
+                a0, a1, a2, a3, a4 = coeff
+                gibbsfit = gibbsgas + cnt.R * (a0 + a1*T + a2*T*np.log(T) + a3*T**2 + a4*T**3)
+        elif Nexp == 8:
+            pdb.set_trace()
+            molegas = mole.strip('(s)')
+            try:
+                gibbsgas = cal_gibbs(chem, molegas, T)    # in J
+            except:
+                print(f'[funcs.cal_gibbs]WARNING: You are fitting gibbs energy of {mole} with formular 8, \
+                which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
+                dofit = False    # cannot get the gas phase gibbs energy
+            else:
+                a0, a1, a2 = coeff
+                gibbsfit = gibbsgas + cnt.R * (a0*T + a1 + a2/T)
+
+    # cannot find the gibbs energy
+    if (not dofit) and (not doint):
+        raise Exception('[funcs.gibbsfit] Cannot find the gibbs energy of {mole} because either gibbstable and gibbsfittable do not contain it.')
+    # only use fitting formulars
+    if (not doint) and dofit:
+        gibbs = gibbsfit
+    # replace the extrapolated gibbs energy with the fit ones
+    if doint and isext and dofit:
+        gibbs[idxext] = gibbsfit[idxext]
+
+    return gibbs
 
 def get_mole(moleterm):
     '''from the term in the chemistry equation getting stoichiometric number and molecule name'''

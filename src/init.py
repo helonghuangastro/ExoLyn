@@ -119,12 +119,13 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
     '''
     Using Newton-Raphson method to calculate equilibrium concentration
     '''
-    def get_F(n, xvi, Sbase, cache, returnjac=False):
+    def get_F(n, xv, Sbase, cache, returnjac=False):
         '''
         get residual function (maybe also Jacobian) of ln(S/bs)
         the last element is the residual for equation of nuclei ln(Sn*tcoag/xn/rhogas)
         '''
-        xvleft = xvi - np.matmul(n, nu)*muv    # a vector with n_v length
+        xvleft = xv
+        # xvleft = xvi - np.matmul(n, nu)*muv    # a vector with n_v length
         nulogxv = np.sum(nu * np.log(xvleft), axis=1) # a vector with xr length
         # xtot = xn + np.sum(n * murc/rhorel)    # a scalar
         xtot = np.sum(n * murc/rhorel)    # a scalar
@@ -176,7 +177,10 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         ''' check whether the solution is acceptable'''
         xvleft = xvi - np.matmul(n, nu)*muv
         #cwo: this is per definition satisfied now
-        xcflag = True
+        if (n<=0.).any():
+            xcflag = False
+        else:
+            xcflag = True
         if (xvleft<=0.).any():#cwo: why "<="?
             xvflag = False
         else:
@@ -192,17 +196,17 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         ii = step<0
         if sum(ii)==0:
             imin = 0
-            kmin = 0
         else:
-            imin = max(0, int(max(-np.log(-n[ii]/step[ii])/np.log(2))))
-            dum1 = xvi /muv -(n@nu)
-            dum2 = step@nu
-            karr = np.where(dum1/dum2>0,-np.log(dum1/dum2)/np.log(2),0)
-            kmin = max(0, int(max(karr)))
+            imin = max(0, np.ceil(max(-np.log(-n[ii]/step[ii])/np.log(2))))
+        dum1 = xvi /muv -(n@nu)
+        dum2 = step@nu
+        karr = np.where(dum1/dum2>0,-np.log(dum1/dum2)/np.log(2),0)
+        kmin = max(0, np.ceil(max(karr)))
 
-
-        i = 0 #the standard
         i = max(imin,kmin)
+        # nnew = n + step/2**i
+
+        # i = 0 #the standard
         while(True):
             nnew = n+step/2**i
             xvleft = xvi - np.matmul(nnew, nu)*muv
@@ -216,7 +220,31 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
                     n = nnew
                     break
             i = i+1
-        return n
+        
+        xvnew = xvi - np.matmul(n, nu) * muv
+
+        return nnew, xvnew
+
+    def newntest(step, n, xv):
+        ''' From the step and n and xn, find the new n '''
+        ii = step<0
+        if sum(ii)==0:
+            imin = 0
+        else:
+            imin = max(0, np.ceil(max(-np.log(-n[ii]/step[ii])/np.log(2))))
+
+        dum1 = xv /muv
+        dum2 = step@nu
+        karr = np.where(dum1/dum2>0,-np.log(dum1/dum2)/np.log(2),0)
+        kmin = max(0, np.ceil(max(karr)))
+
+        i = max(imin,kmin)
+        newstep = step/2**i
+
+        nnew = n + newstep
+        xvnew = xv - np.matmul(newstep, nu) * muv
+
+        return nnew, xvnew
 
     def newton(xvi, Sbase, iniguess, cache):
         ''' Use Newton method to get the supersaturation ratio at one location'''
@@ -230,21 +258,24 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
 
         n = inin
         F = get_F(n, xvi, Sbase, cache)
+        xv = xvi - np.matmul(inin, nu) * muv
         j = 0
         flagsingle = 0    # flag for the status of finding initial state: 0 for success; -1 for exceed maximum iteration; -2 for step becomes too samll
         Farr = []
+        # pdb.set_trace()
         while(np.max(np.abs(F))>0.01):
-            # TBD: one way to accelerate is that once n.sum() >> xn, only calculate xn and check whether n.sum() >> xn still satisfies. In this way, less iteration of j may be needed.
-            F, jac = get_F(n, xvi, Sbase, cache, returnjac=True)
+            F, jac = get_F(n, xv, Sbase, cache, returnjac=True)
             Farr.append(np.max(np.abs(F)))
             step = np.linalg.solve(jac, -F)
 
-            #cwo: what is this?
+            # if the step is too small (iteration stucks), break
             if np.max(np.abs(step/n))<1e-13:
                 flagsingle = -2
                 break
 
-            n = newn(step, n, xvi)
+            # pdb.set_trace()
+            # n, xv = newn(step, n, xvi)
+            n, xv = newntest(step, n, xv)
             
             # when iterate for too long, break it
             j += 1
@@ -252,7 +283,35 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
                 flagsingle = -1
                 break
 
-        return flagsingle, n
+            # when nan is encountered
+            if np.any(np.isnan(F)):
+                flagsingle = -3
+                break
+
+        return flagsingle, n, xv
+
+    def interpfail(mat, failidx):
+        ''' Interpolate failed grid points '''
+        if failidx[0]==0:
+            endi = 0
+        else:
+            endi = -1
+        idx = np.where(np.diff(failidx)!=1)[0]+1    #idx is where the failidx is not continuous
+        idx = np.append(idx, len(failidx))
+        idx = np.insert(idx, 0, 0)
+        for i in range(len(idx)-2, endi, -1):
+            nfail = failidx[idx[i+1]-1]-failidx[idx[i]]+1    # number of failed grid points in each sector
+            interplever = (np.arange(nfail)+1)/(nfail+1)     # leverage to interpolate the failed points from the neighbouring successful cases
+            rightcontrib = np.atleast_2d(mat[:, failidx[idx[i+1]-1]+1]).T * interplever
+            leftcontrib = np.atleast_2d(mat[:, failidx[idx[i]]-1]).T * (1-interplever)
+            mat[:, failidx[idx[i]:idx[i+1]]] = rightcontrib + leftcontrib
+
+        if failidx[0]==0:
+            # process the first sector
+            mat[:, :(failidx[idx[1]-1]+1)] = np.atleast_2d(mat[:, failidx[idx[1]-1]+1]).T
+
+        return mat
+
 
     rhorel = rhosolid/pars.rho_int
 
@@ -279,13 +338,14 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         # if S is too large, skip newton iteration
         # TBD: This is not directly solving the problem, need to think of a way to solve it
         try:
-            flagsingle, result = newton(xv[:, i], Sbase[:, i], iniguess, cachegrid[i])
+            flagsingle, result, resultxv = newton(xv[:, i], Sbase[:, i], iniguess, cachegrid[i])
         except (TypeError, np.linalg.LinAlgError):
             flagsingle = -1
 
         status[i] = flagsingle
         if flagsingle == 0:
             nsolid[:, i] = result
+            xv[:, i] = resultxv
         elif flagsingle == -1 and SR[:, i].sum()>10:    # update Sfail if necessary
             Sfail = np.minimum(Sfail, SR[:, i].sum())
 
@@ -294,7 +354,7 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
 
     # insert under-saturated values
     idx = np.where((status!=0) & (SR.sum(axis=0)<10.))[0]    # where the atmosphere is undersaturated
-    idxdiff = np.diff(idx)    # only do this for the last sector
+    idxdiff = np.diff(idx)    # only do this for the last sector, because previous sectors can be inserted later.
     if np.any(idxdiff!=1):
         idxlastsector = np.where(idxdiff!=1)[0][-1]
         idx = idx[(idxlastsector+1):]
@@ -302,29 +362,16 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
     if len(idx)!=0:
         for i in range(len(reactions)):
             nsolid[i, idx] = nsolid[i, idx[0]-1]
+        for i in range(len(xv)):
+            xv[i, idx] = xv[i, idx[0]-1]
         status[idx] = 1
 
     # insert super saturated values
     if (status<0).any():
         print('[init]WARNING: Failure to find initial guess for some grid points. Extrapolate successful grids')
         failidx = np.where(status<0)[0]
-        if failidx[0]==0:
-            endi = 0
-        else:
-            endi = -1
-        idx = np.where(np.diff(failidx)!=1)[0]+1    #idx is where the failidx is not continuous
-        idx = np.append(idx, len(failidx))
-        idx = np.insert(idx, 0, 0)
-        for i in range(len(idx)-2, endi, -1):
-            nfail = failidx[idx[i+1]-1]-failidx[idx[i]]+1    # number of failed grid points in each sector
-            interplever = (np.arange(nfail)+1)/(nfail+1)     # leverage to interpolate the failed points from the neighbouring successful cases
-            rightcontrib = np.atleast_2d(nsolid[:, failidx[idx[i+1]-1]+1]).T * interplever
-            leftcontrib = np.atleast_2d(nsolid[:, failidx[idx[i]]-1]).T * (1-interplever)
-            nsolid[:, failidx[idx[i]:idx[i+1]]] = rightcontrib + leftcontrib
-
-        if failidx[0]==0:
-            # process the first sector
-            nsolid[:, :(failidx[idx[1]-1]+1)] = np.atleast_2d(nsolid[:, failidx[idx[1]-1]+1]).T
+        nsolid = interpfail(nsolid, failidx)
+        xv = interpfail(xv, failidx)
 
     xn = np.sum(np.atleast_2d(murc / rhorel).T * nsolid, axis=0)
 
@@ -340,76 +387,48 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
             nsolid[:, -1] = 0
             xn[-1] = 0
 
-    return nsolid, xn
+    return nsolid, xv, xn
 
 def init (atmosphere, method):
     '''
     Change by now: use atmosphere rather than Parr; don't use cache
     '''
-    logP = atmosphere.grid
-    Parr = np.exp(logP)
+    Parr = atmosphere.Parr
     N = atmosphere.N
+
     ncod = atmosphere.ncond
     ngas = atmosphere.ngas
-    dx = atmosphere.dx
-    reactions = atmosphere.chem.reactions
-    rhosolid = atmosphere.chem.rhosolid
+    chem = atmosphere.chem
+    reactions = chem.reactions
+    rhosolid = chem.rhosolid
 
     # prepare chemistry things
-    nu = []
-    for reaction in reactions:
-        nu.append(reaction.gasst)
-    nu = np.array(nu)
-    muv = atmosphere.chem.mugas
-    murc = np.array([atmosphere.chem.molecules[reaction.solid+'(s)'].mu for reaction in reactions])
+    nu = chem.gasst
+    muv = chem.mugas
+    murc = np.array([chem.molecules[reaction.solid+'(s)'].mu for reaction in reactions])
 
     y0 = np.zeros((ncod+ngas+1, N))
     # initial concentration without any condensation etc ...
     for i in range(ngas):
         y0[ncod+i] = pars.xvb[i]
 
-    # try to find initial nuclei concentration by eliminating the source term
-    # if hasattr(pars, 'TPmode') and pars.TPmode=='interp':
-    #     TPdata = np.genfromtxt(pars.TPfile, names=True, deletechars='', comments='#')
-    #     logP_ref = np.log10(TPdata['P_ref'])
-    #     T_ref = TPdata['T_ref']
-    # else:
-    #     logP_ref = np.log10(Parr)
-    #     T_ref = funs.TP(Parr)
-    # def dxndlogP(logP):
-    #     ''' calculate xn derivative to logP '''
-    #     P = np.exp(logP)
-    #     T = np.interp(np.log10(P), logP_ref, T_ref)
-    #     rho = funs.rho(P, T)
-    #     pref = -cnt.kb * T / (pars.g * pars.mgas)
-    #     return - pref * funs.cal_Mn(P)/(pars.Kzz*rho)
-    # for i in range(N):
-    #     y0[-1, i] = quad(dxndlogP, logP[-1], logP[i], epsabs=1e-12, epsrel=1e-12)[0]
-    # y0[-1, -1] = y0[-1, -2]**2/y0[-1, -3]    # by definition of the integration, xn would be 0 at the lower boundary. So here interpolate
-
     # calculate solid concentration 
-    if method=='scipy':
-        # using scipy to solve the equlibrium concentration of solids
-        nsolid = condscipy(Parr, reactions, cache, nu, muv, murc, y0[-1])
     if method=='Newton':
         # My Newton method to calculate the equilibrium concentration of solids.
-        nsolid, xn = condnewton(y0[ncod:(ncod+ngas)], Parr, reactions, atmosphere.cachegrid, nu, muv, murc, rhosolid)
-    elif method=='half':
-        nsolid = condbis(Parr, reactions, cache, nu, muv)
-    elif method=='gold':
-        # using minimization method to iterate the equilibrium concentrationof solids
-        nsolid = condgold(Parr, reactions, cache, nu, muv, murc, y0[-1])
+        nsolid, xv, xn = condnewton(y0[ncod:(ncod+ngas)], Parr, reactions, atmosphere.cachegrid, nu, muv, murc, rhosolid)
     else:
         raise Exception('Unknown method to calculate initial solid concentration')
 
     for i in range(len(reactions)):
         solidindex = reactions[i].solidindex
-        y0[solidindex] += atmosphere.chem.molecules[pars.solid[solidindex]+'(s)'].mu * nsolid[i]
-        y0[ncod:(ncod+ngas)] -= np.atleast_2d(nu[i]*muv).T*nsolid[i]    # gas concentration -= n*mu
+        y0[solidindex] += murc[i] * nsolid[i]
+    y0[ncod:(ncod+ngas)] = xv
 
     # post process the gas to be larger than 0. Previous step may introduce numerical error, leading to negative or 0 where it should not.
+    # TBD: is this necesssary?
     for i in range(ngas):
         if (y0[ncod+i]<=0).any():
+            pdb.set_trace()
             ispos = y0[ncod+i]>0
             smallestpos = np.min(y0[ncod+i][ispos])
             y0[ncod+i, ~ispos] = smallestpos
@@ -436,11 +455,7 @@ def findbound(Pa, Pb, N, chem):
         Get the super saturation ratio of all the species.
         '''
         xvb = pars.xvb
-        reactions = cache.chem.reactions
-        nu = []
-        for reaction in reactions:
-            nu.append(reaction.gasst)
-        nu = np.array(nu)
+        nu = chem.gasst
         nulogxv = np.sum(nu * np.log(xvb), axis=1) # a vector with xr length
         Sbase = cache.cachegrid.Sbase_grid
         SR = Sbase * np.atleast_2d(np.exp(nulogxv)).T    # super saturation ratio for cloud base
@@ -450,7 +465,8 @@ def findbound(Pa, Pb, N, chem):
     cache = funs.init_cache(Parr, chem)
     SR = getS(cache)
     if pars.autoboundary:
-        while(SR.sum(axis=0)[-1]>1 and cache.cachegrid.T_grid[-1]<=chem.gibbsdata['Tref'][-1]):
+        while(SR.sum(axis=0)[-1]>1):
+        # while(SR.sum(axis=0)[-1]>1 and cache.cachegrid.T_grid[-1]<=chem.gibbsTref[-1]):
             Pb *= 10
             Parr = np.logspace(np.log10(Pa), np.log10(Pb), pars.N)
             cache = funs.init_cache(Parr, chem)
@@ -471,12 +487,12 @@ def findbound(Pa, Pb, N, chem):
         Pb = Parr[bottomidx] * 2
         Parr = np.logspace(np.log10(Pa), np.log10(Pb), pars.N)
         cache = funs.init_cache(Parr, chem)
-        if cache.cachegrid.T_grid[-1] > chem.gibbsdata['Tref'][-1]:
+        if cache.cachegrid.T_grid[-1] > chem.gibbsTref[-1]:
             print('[init.findbound]WARNING: No Gibbs energy data given at the highest temperature. Extrapolating the Gibbs energy.')
         SR = getS(cache)
 
     # check unimportant species whose super saturation ratio is always smaller than 1. User can remove that in the next run to speed up
-    for i, reaction in enumerate(cache.chem.reactions):
+    for i, reaction in enumerate(chem.reactions):
         if np.all(SR[i]<1.):
             print('[init.findbound]INFO: ' + reaction.solid + ' is an unimportant species with super saturation ratio < 1 everywhere.')
     

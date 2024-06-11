@@ -28,7 +28,7 @@ def write_element(elementgrid):
             opt.write(element + ' ' + str(abundance) + '\n')
 
 ########### reconstruct the atmosphere object ###########
-gridfile = 'grid.txt'
+gridfile = 'gridCO09.txt'
 kappafolder = 'coeff/'
 # kappafolder = None
 from read import reconstruct
@@ -49,7 +49,9 @@ chem = atmosphere.chem
 # other interesting species and their concentration
 extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
 # extragascon = np.array([1.3e-3, 1, 0.33, 0, 0])    # for CtoO /= 3
-extragascon = np.array([3.2e-2, 1, 0.33, 0, 0])    # for metallicity *= 10
+# extragascon = np.array([4.1e-3, 0.75, 0.25, 0, 0])    # for CtoO = 0.8
+extragascon = np.array([4.4e-3, 0.75, 0.25, 0, 0])    # for CtoO = 0.9
+# extragascon = np.array([3.2e-2, 1, 0.33, 0, 0])    # for metallicity *= 10
 # extragascon = np.array([3.2e-3, 1, 0.33, 0, 0])
 # all of the gas molecules to be considered in the spectrum calculation
 gasmols = []

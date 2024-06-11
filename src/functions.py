@@ -8,6 +8,7 @@ import parameters as pars
 import constants as cnt
 from scipy.special import erf
 import pdb
+from chemistry import cal_gibbs
 
 class sim_cache_single():
     def __init__(self):
@@ -449,103 +450,6 @@ def cal_Sc(xv, aparr, n_parr, bs, gasst, solidindex, i, cache, mugas, mucond):
     # Sc_term[negapidx] = 0    # if ap<0, make Sc=0
     return Sc_term
 
-def gibbsfit(chem, mole, T):
-    '''
-    get the gibbs energy of one species by fitting or extrapolating Gibbs energy
-    I feel that this function can be combined with the above function
-    '''
-    doint = False    # whether we interpolate
-    dofit = False    # whether we fit
-    isext = False    # whether the interpolate extrapolate
-    # if T within valid temperature of JANAF table, just interpolate
-    if mole in chem.gibbsdata.dtype.names:
-        doint = True
-    else:
-        dofit = False
-
-    # first interpolate
-    if doint:
-        gibbsref = chem.gibbsdata[mole] * 1e3
-        idxvalid = ~np.isnan(gibbsref)
-        gibbsref = gibbsref[idxvalid]
-        Tref = chem.gibbsdata['Tref'][idxvalid]
-        gibbs = np.interp(T, Tref, gibbsref)
-
-        # find the temperature where extrapolate
-        idxext = (T<np.min(Tref)) | (T>np.max(Tref))
-        if (idxext==True).any():
-            isext = True
-
-    # when extrapolate or the gibbs energy not in the table, using fit expression
-    if (doint and isext) or (not doint):    # NEED to fit
-        if (mole in chem.gibbsfitcoeffs.keys()):    # ABLE to fit
-            dofit = True
-        else:
-            dofit = False
-
-    # if has the fitting formular of mole and extrapolate, use the fitting formular
-    if dofit:
-        coefflist = chem.gibbsfitcoeffs[mole]
-        Nexp = coefflist[0]
-        coeff = coefflist[1:]
-        # fitting formular 0
-        if Nexp == 0:
-            a1, a2, a3, a4 = coeff
-            gibbsfit = cnt.R*T*(a1*np.log(T) + a2 + a3*T + a4*T**2)
-        elif Nexp == 2:
-            a0, a1, a2, a3, a4 = coeff
-            gibbsfit = a0/T + a1 + a2*T + a3*T**2 + a4*T**3
-            gibbsfit *= 1e3    # convert the unit to J
-        elif Nexp == 3:
-            molegas = mole.strip('(s)')
-            try:
-                gibbsgas = gibbsfit(chem, molegas, T)    # in J
-            except:
-                print(f'[funcs.gibbsfit]WARNING: You are fitting gibbs energy of {mole} with formular 3, \
-                which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
-                dofit = False    # cannot get the gas phase gibbs energy
-            else:
-                a0, a1, a2, a3, a4 = coeff
-                gibbsfit = gibbsgas + cnt.R * (a0 + a1*T + a2*T**2 + a3*T**3 + a4*T**4)
-        elif Nexp == 5:
-            a0, a1, a2, a3, a4 = coeff
-            gibbsfit = cnt.R*(a0 + a1*np.log(T)*T + a2*T + a3*T**2 + a4*T**3)
-        elif Nexp == 6:
-            molegas = mole.strip('(s)')
-            try:
-                gibbsgas = gibbsfit(chem, molegas, T)    # in J
-            except:
-                print(f'[funcs.gibbsfit]WARNING: You are fitting gibbs energy of {mole} with formular 6, \
-                which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
-                dofit = False    # cannot get the gas phase gibbs energy
-            else:
-                a0, a1, a2, a3, a4 = coeff
-                gibbsfit = gibbsgas + cnt.R * (a0 + a1*T + a2*T*np.log(T) + a3*T**2 + a4*T**3)
-        elif Nexp == 8:
-            pdb.set_trace()
-            molegas = mole.strip('(s)')
-            try:
-                gibbsgas = gibbsfit(chem, molegas, T)    # in J
-            except:
-                print(f'[funcs.gibbsfit]WARNING: You are fitting gibbs energy of {mole} with formular 8, \
-                which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
-                dofit = False    # cannot get the gas phase gibbs energy
-            else:
-                a0, a1, a2 = coeff
-                gibbsfit = gibbsgas + cnt.R * (a0*T + a1 + a2/T)
-
-    # cannot find the gibbs energy
-    if (not dofit) and (not doint):
-        raise Exception('[funcs.gibbsfit] Cannot find the gibbs energy of {mole} because either gibbstable and gibbsfittable do not contain it.')
-    # only use fitting formulars
-    if (not doint) and dofit:
-        gibbs = gibbsfit
-    # replace the extrapolated gibbs energy with the fit ones
-    if doint and isext and dofit:
-        gibbs[idxext] = gibbsfit[idxext]
-
-    return gibbs
-
 def cal_Sbase(P, T, chem):
     '''
     TBD: should check the netnu here
@@ -559,7 +463,7 @@ def cal_Sbase(P, T, chem):
         gibbsref = reaction.delG
         idxvalid = ~np.isnan(gibbsref)
         gibbsref = gibbsref[idxvalid]
-        Tref     = chem.gibbsdata['Tref'][idxvalid]
+        Tref     = chem.gibbsTref[idxvalid]
         delG = np.interp(T, Tref, gibbsref)    # gibbs energy diffrence
 
         # using fitting formular of the gibbs energy if necessary
@@ -568,9 +472,9 @@ def cal_Sbase(P, T, chem):
             print('[funs.cal_Sbase]WARNING: No Gibbs energy data given at some temperatures. Extrapolating the Gibbs energy or fitting it.')
             delGfit = 0
             for molename, st in reaction.product.items():
-                delGfit += gibbsfit(chem, molename, T[fitidx]) * st
+                delGfit += cal_gibbs(chem, molename, T[fitidx]) * st
             for molename, st in reaction.reactant.items():
-                delGfit -= gibbsfit(chem, molename, T[fitidx]) * st
+                delGfit -= cal_gibbs(chem, molename, T[fitidx]) * st
             delG[fitidx] = delGfit
 
         netnu = reaction.netnu

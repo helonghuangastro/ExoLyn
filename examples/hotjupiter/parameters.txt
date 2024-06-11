@@ -10,7 +10,7 @@ g = 2192        # gravitational acceleration, cm s^-1
 # simulation control parameters
 runname = ''
 rootdir = '../../'    # the root directory of the cloud model
-gibbsfile = rootdir + 'tables/gibbs.txt'
+gibbsfile = rootdir + 'tables/gibbs_test.txt'
 ##suppress warnings?
 suppresswarnings = 'all'
 
@@ -22,7 +22,7 @@ suppresswarnings = 'all'
 # -- 'quiet'= only draw at the end; 
 # -- 'default'= plot once finished converging fpara; 
 # -- 'verbose'= plot for every fpara value
-verbose = 'quiet'
+verbose = 'verbose'
 # plot behavior
 ##choose w/r to show and/or save intermediate files.
 # -- 'all'      :do all of the below

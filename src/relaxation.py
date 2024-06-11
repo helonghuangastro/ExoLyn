@@ -440,7 +440,6 @@ if __name__ == '__main__':
     Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
 
     logP = np.log(Parr)
-    dx = logP[1]-logP[0]
 
     atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere that has alchemistryy been converged
     atmospheren = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere class used in each iteration

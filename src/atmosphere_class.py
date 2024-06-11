@@ -11,6 +11,7 @@ class atmosphere():
         self.grid = grid              # grid
         self.dx = grid[1]-grid[0]     # grid space
         self.N = len(grid)            # number of grid
+        self.Parr = np.exp(self.grid)
         self.solid = solid            # list of solid
         self.gas = gas                # list of gas
         self.ncond = len(solid)       # number of solid
