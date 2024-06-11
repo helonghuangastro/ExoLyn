@@ -1,4 +1,4 @@
-# AtmCloud
+# ExoLyn
 ## Compile the code
 After downloading the code, you can compile the fortran part by running `bash build.sh`
 
