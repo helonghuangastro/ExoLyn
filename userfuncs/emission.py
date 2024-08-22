@@ -28,7 +28,7 @@ def write_element(elementgrid):
             opt.write(element + ' ' + str(abundance) + '\n')
 
 ########### reconstruct the atmosphere object ###########
-gridfile = 'gridHR8799e.txt'
+gridfile = 'gridHR8799etau.txt'
 kappafolder = 'coeff/'
 # kappafolder = None
 from read import reconstruct
@@ -47,8 +47,8 @@ rhop = atmosphere.rho
 ########### equilibrium chemistry calculations ##########
 chem = atmosphere.chem
 # other interesting species and their concentration
-extragas = ['CO', 'H2', 'He', 'CH4', 'CO2']    # extra gas that may contribute to spectrum
-extragascon = np.array([3.2e-3, 1, 0.33, 0, 0])
+extragas = ['CO', 'H2', 'He', 'CH4', 'CO2', 'K', 'Na']    # extra gas that may contribute to spectrum
+extragascon = np.array([3.2e-3, 1, 0.33, 0, 0, 1.7e-6, 1.7e-5])
 # all of the gas molecules to be considered in the spectrum calculation
 gasmols = []
 for gasname in extragas + pars.gas:
@@ -190,23 +190,25 @@ def cloud_opas(spobj):
     return give_opacity
 
 ####### Radiation transfer part #######
-linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al']
+linespecies = ['H2O_HITEMP', 'CO_all_iso_HITEMP', 'H2S', 'Mg', 'SiO', 'Fe', 'CO2', 'CH4', 'TiO_all_Exomol', 'Al', 'Na_allard', 'K_allard']
 atmosphere = Radtrans(line_species=linespecies, rayleigh_species=['H2', 'He'], continuum_opacities = ['H2-H2', 'H2-He'], wlen_bords_micron = [wlenrange[0], wlenrange[-1]])
 atmosphere.setup_opa_structure(Parrbar)
 
 mass_fractions = {}
 mass_fractions['H2'] = ygasnew[1]
 mass_fractions['He'] = ygasnew[2]
-mass_fractions['H2O_HITEMP'] = ygasnew[7]
+mass_fractions['H2O_HITEMP'] = ygasnew[9]
 mass_fractions['CO_all_iso_HITEMP'] = ygasnew[0]
-mass_fractions['H2S'] = ygasnew[9]
-mass_fractions['Mg'] = ygasnew[5]
-mass_fractions['SiO'] = ygasnew[6]
-mass_fractions['Fe'] = ygasnew[8]
+mass_fractions['H2S'] = ygasnew[11]
+mass_fractions['Mg'] = ygasnew[7]
+mass_fractions['SiO'] = ygasnew[8]
+mass_fractions['Fe'] = ygasnew[10]
 mass_fractions['CO2'] = ygasnew[4]
 mass_fractions['CH4'] = ygasnew[3]
-mass_fractions['TiO_all_Exomol'] = ygasnew[10]
-mass_fractions['Al'] = ygasnew[11]
+mass_fractions['TiO_all_Exomol'] = ygasnew[12]
+mass_fractions['Al'] = ygasnew[13]
+mass_fractions['Na_allard'] = ygasnew[6]
+mass_fractions['K_allard'] = ygasnew[5]
 
 
 MMW = pars.mgas / cnt.mu * np.ones_like(Parr)
@@ -253,7 +255,7 @@ flux = np.vstack((flux, atmosphere.flux*fconvert))
 labels.append(l.get_label().replace(' ', '_'))
 
 # calculate atmosphere without CH4
-mass_fractions['H2O_HITEMP'] = ygasnew[7]
+mass_fractions['H2O_HITEMP'] = ygasnew[9]
 mass_fractions['CH4'] = np.zeros_like(Parr)
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl, give_absorption_opacity=cloud_opas(spabs), give_scattering_opacity=cloud_opas(spsca))
@@ -273,7 +275,7 @@ flux = np.vstack((flux, atmosphere.flux*fconvert))
 labels.append(l.get_label().replace(' ', '_'))
 
 # calculate clear atmosphere
-mass_fractions['H2S'] = ygasnew[9]
+mass_fractions['H2S'] = ygasnew[11]
 
 atmosphere.calc_flux(Tarr, mass_fractions, gravity, MMW, R_pl=R_pl)
 
