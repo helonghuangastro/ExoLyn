@@ -360,10 +360,13 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         idx = idx[(idxlastsector+1):]
     # substitute the failed solid concentration
     if len(idx)!=0:
-        for i in range(len(reactions)):
-            nsolid[i, idx] = nsolid[i, idx[0]-1]
-        for i in range(len(xv)):
-            xv[i, idx] = xv[i, idx[0]-1]
+        xnlast = np.sum(murc / rhorel * nsolid[:, idx[0]-1])    # extrapolate xn
+        nsolid[:, idx] = np.atleast_2d(rhorel / murc).T * xnlast * SR[:, idx]    # check this
+        xv[:, idx] = np.atleast_2d(pars.xvb).T
+        # for i in range(len(reactions)):
+        #     nsolid[i, idx] = nsolid[i, idx[0]-1]
+        # for i in range(len(xv)):
+        #     xv[i, idx] = xv[i, idx[0]-1]
         status[idx] = 1
 
     # insert super saturated values
