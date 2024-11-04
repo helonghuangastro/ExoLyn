@@ -8,7 +8,7 @@ g = 1065        # gravitational acceleration, cm s^-1
 
 
 # simulation control parameters
-runname = 'GJ1214'
+runname = 'GJ1214best'
 rootdir = '../../'
 gibbsfile = rootdir + 'tables/gibbs_test.txt'
 ##suppress warnings?
@@ -50,17 +50,17 @@ T_int = 300     # interior temperature, K
 
 # other uncertainties in the cloud model
 mgas = 5.0 * cnt.mu    # gas molecular weight, g
-Kzz = 1e8       # diffusion, cm^2s^-1
-Kp = 1e8        # particle diffusivity, cm^2s^-1
+Kzz = 1e10       # diffusion, cm^2s^-1
+Kp = 1e10        # particle diffusivity, cm^2s^-1
 cs_mol = 2e-15  # molecular cross section, cm^2
 
 f_stick = 1.    # sticking probability
 f_coag = 1.
 cs_com = 8e-15  # combined cross section for vapor and H2, cm^2
 rho_int = 2.8   # particle internal density, g cm^-3
-an = 1e-7       # nucleation radius, cm
+an = 5e-8       # nucleation radius, cm
 mn0 = 4 / 3 * np.pi * rho_int * an ** 3    # nucleation mass, g
-nuc_pro = 1e-15 # (integrated) nuclei productio rate, g cm^-2 s^-1
+nuc_pro = 1e-19 # (integrated) nuclei productio rate, g cm^-2 s^-1
 sigma_nuc = 0.2 # width of the nucleation profile
 P_star = 60     # nucleation height, in cgs
 
@@ -68,6 +68,8 @@ P_star = 60     # nucleation height, in cgs
 # chemical settings
 gas = ['Na', 'HCl', 'K', 'Zn', 'H2S']
 xvb = [7.3e-4, 2.1e-4, 7.6e-5, 4.3e-5, 8.1e-3]
+# xvb = [8e-6, 2.3e-4, 6e-7, 4.7e-5, 8.9e-3]    # rain out Na and K
+#xvb = [5e-4, 3.7e-4, 1.47e-5, 5e-4, 8.6e-3]    # boost Zn
 
 
 ##optical constant calculations
