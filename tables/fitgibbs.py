@@ -163,7 +163,8 @@ def gibbsfit(gibbsfile, expressiondict, outputfile=None, isplot=False):
 fitdict = {'H2O':0, 'Na':0, 'TiO':0, 'H2':0, 'H2S':0, 'K':0,
             'SiO':0, 'Zn':0, 'Al':0, 'Fe':0, 'Ca':0, 'Mg':0,
             'FeS':0, 'KCl':0, 'TiO2':0, 'SiO2':0, 'MgO':0, 
-            'HCl':0, 'NaCl':0, 'FeO':0, 'NH3':0,
+            'HCl':0, 'NaCl':0, 'FeO':0, 'NH3':0, 'Al2O':0,
+            'HAlO2':0,
             'MgSiO3(s)':2, 'Mg2SiO4(s)':2, 'TiO2(s)':3, 'SiO2(s)':3, 
             'Fe(s)':3, 'FeS(s)':3, 'FeO(s)':3, 'MgO(s)':3, 'TiO(s)':3,
             'NaCl(s)':3, 'KCl(s)':3, 'Al2O3(s)':5, 'Fe2O3(s)':5, 'H2O(s)':6, 
@@ -172,4 +173,4 @@ fitdict = {'H2O':0, 'Na':0, 'TiO':0, 'H2':0, 'H2S':0, 'K':0,
 addexpressiondict = {'NH3(s)': [8, 10.53, -2161, -86594]}
 
 coeff = gibbsfit('gibbs_test.txt', fitdict, outputfile='gibbsfit.txt', isplot=False)
-# coeff = gibbsfit('gibbs_test.txt', {'ZnS(s)':5}, outputfile=None, isplot=True)
+# coeff = gibbsfit('gibbs_test.txt', {'H2O(s)':6}, outputfile=None, isplot=True)

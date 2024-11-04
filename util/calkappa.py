@@ -31,7 +31,7 @@ def cal_opa (filename, ap, Nlam, optooldir, dirkappa='./coeff', write=False, sav
     p = optool.particle(command, silent=True)
 
     if write:
-        with open('coeff/'+savefile, 'w') as opt:
+        with open(dirkappa + '/'+savefile, 'w') as opt:
             opt.write('#optical properties for particle ...\n')
             opt.write('#cols::[wavelength,kappa_abs,kappa_sca,kappa_ext,asymmetry_parameter]\n')
             opt.write('#colunits::[micron,cm2/g,cm2/g,cm2/g,]\n')
@@ -79,7 +79,7 @@ def cal_opa_all(aparr, write=False, Nlam=100, wavelengthgrid=None,
 
     ## CWO: maybe only return when write is False?  
     if write==False:
-        kappadata = {'wlen':wlen, 'kabs':kabsmat, 'ksca':kscamat, 'kext':kextmat, 'gsca':gscamat}
+        kappadata = {'wlen':p.lam, 'kabs':kabsmat, 'ksca':kscamat, 'kext':kextmat, 'gsca':gscamat}
         return kappadata
 
 

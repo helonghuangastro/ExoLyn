@@ -13,7 +13,7 @@ import pdb
 sys.path.append('../util')
 import os
 
-gridfile = '../test/test_cloudspecies/gridFe.txt'
+gridfile = '../test/test_Kzz/gridKzz4.txt'
 from read import reconstruct
 atmosphere, pars = reconstruct(gridfile)
 
@@ -37,7 +37,7 @@ rhog = cachegrid.rho_grid
 
 # calculate effective refractory index
 bs = atmosphere.bs
-wlenkappa = np.logspace(0, np.log10(20), 100)
+wlenkappa = np.logspace(np.log10(0.5), np.log10(20), 100)
 mmat = cal_eff_m_all(bs, pars.solid, wlenkappa)
 writelnk(mmat, wlenkappa, rhop, folder='meff')
 

@@ -1,3 +1,9 @@
+'''
+A script to download the JANAF table from NIST
+Usage: python3 download_janaf_table.py <species name in janaf table> <molecular name>
+e.g. if you want to download the JANAF table for Al2O, you can use the following command:
+python3 download_janaf_table.py Al-092 Al2O
+'''
 import requests
 import sys
 
