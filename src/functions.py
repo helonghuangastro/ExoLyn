@@ -9,6 +9,7 @@ import constants as cnt
 from scipy.special import erf
 import pdb
 from chemistry import cal_gibbs
+from scipy.interpolate import PchipInterpolator
 
 class sim_cache_single():
     def __init__(self):
@@ -310,7 +311,17 @@ def TP(Parr):
         logP = np.log10(Parr)
         logP_ref = np.log10(TPdata['P_ref'])
 
-        T = np.interp(logP, logP_ref, TPdata['T_ref'])
+        # T = np.interp(logP, logP_ref, TPdata['T_ref'])
+        logT = PchipInterpolator(logP_ref, np.log(TPdata['T_ref']), extrapolate=True)(logP)
+        T = np.exp(logT)
+
+        # when extrapolate the lower boundary, should do it exponentially. In case cannot find the lower boundary
+        idxextlow = np.where(logP > logP_ref[-1])[0]
+        if len(idxextlow) > 0:
+            logP_extlow = logP[idxextlow]
+            T_ref_bot = TPdata['T_ref'][-1]
+            T_ref_bot2 = TPdata['T_ref'][-2]
+            T[idxextlow] = T_ref_bot * np.exp((logP_extlow - logP_ref[-1]) * (np.log(T_ref_bot) - np.log(T_ref_bot2)) / (logP_ref[-1] - logP_ref[-2]))    # exponentially extrapolate
 
     return T
 
