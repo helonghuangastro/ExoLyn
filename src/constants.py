@@ -9,3 +9,6 @@ mu = 1.66053904e-24    #atomic mass unit, g
 
 kb = 1.380649e-16    # Boltzmann constant, g cm^2 s^-2 K^-1
 R = 8.31441        # ideal gas constant, J mol^-1 K-1
+
+c = 2.99792458e10    # speed of light, cm s^-1
+
