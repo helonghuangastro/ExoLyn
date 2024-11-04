@@ -467,7 +467,7 @@ def findbound(Pa, Pb, N, chem):
     Parr = np.logspace(np.log10(Pa), np.log10(Pb), N)
     cache = funs.init_cache(Parr, chem)
     SR = getS(cache)
-    if pars.autoboundary:
+    if pars.autobdrylow:
         while(SR.sum(axis=0)[-1]>1):
         # while(SR.sum(axis=0)[-1]>1 and cache.cachegrid.T_grid[-1]<=chem.gibbsTref[-1]):
             Pb *= 10

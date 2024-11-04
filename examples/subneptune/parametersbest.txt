@@ -38,7 +38,8 @@ N = 700
 Pa = 1.         # pressure at the upper limit of atmosphere, in cgs units
 Pb = 1e6        # pressure at the lower limit of atmosphere, in cgs units
 Pref = 1e6      # reference pressure at which the gibbs energy is measured
-autoboundary = True     # whether or not adjust the lower boundary automatically
+autobdrylow = True     # whether or not adjust the lower boundary automatically
+autobdrytop = True     # whether or not adjust the upper boundary automatically
 
 
 # T-P profile settings

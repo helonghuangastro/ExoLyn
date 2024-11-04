@@ -403,7 +403,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
                 fsucc = fpara
                 if len(ffail)==0:
                     ffail = np.array([np.minimum(1., 10*fpara)])
-                if fpara_name == 'fsed' and True:
+                if fpara_name == 'fsed' and pars.autobdrytop:
                     adjust_upper(atmosphere, atmospheren, **kwargs)
             # failed case
             else:
