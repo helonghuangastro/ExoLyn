@@ -338,7 +338,7 @@ def cal_gibbs(chem, mole, T):
         elif Nexp == 6:
             molegas = mole.strip('(s)')
             try:
-                gibbsgas = gibbsfit(chem, molegas, T)    # in J
+                gibbsgas = cal_gibbs(chem, molegas, T)    # in J
             except:
                 print(f'[funcs.cal_gibbs]WARNING: You are fitting gibbs energy of {mole} with formular 6, \
                 which requires the corresponding gas phase gibbs energy. However, the gibbs energy of {molegas} is not found in the gibbsfile.')
@@ -383,4 +383,4 @@ def get_mole(moleterm):
         st = int(moleterm[:i])
     return st, molename
 
-element_data = {'H':1, 'He':4, 'C':12, 'N':14, 'O':16, 'Na':23, 'Mg':24, 'Al':27, 'Si':28, 'S':32, 'Cl':35.5, 'K':39, 'Ca':40, 'Ti':48, 'Cr':52, 'Mn':55, 'Fe':56, 'Zn':65}    # all element data 
+element_data = {'H':1, 'He':4, 'C':12, 'N':14, 'O':16, 'Na':23, 'Mg':24, 'Al':27, 'Si':28, 'P':31, 'S':32, 'Cl':35.5, 'K':39, 'Ca':40, 'Ti':48, 'V':51, 'Cr':52, 'Mn':55, 'Fe':56, 'Zn':65}    # all element data 
