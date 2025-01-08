@@ -315,6 +315,10 @@ def TP(Parr):
         logT = PchipInterpolator(logP_ref, np.log(TPdata['T_ref']), extrapolate=True)(logP)
         T = np.exp(logT)
 
+        # when extrapolate the upper boundary, should copy the upper boundary value
+        idxextup = np.where(logP < logP_ref[0])[0]
+        if len(idxextup) > 0:
+            T[idxextup] = TPdata['T_ref'][0]
         # when extrapolate the lower boundary, should do it exponentially. In case cannot find the lower boundary
         idxextlow = np.where(logP > logP_ref[-1])[0]
         if len(idxextlow) > 0:
