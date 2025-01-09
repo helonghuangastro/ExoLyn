@@ -21,7 +21,13 @@ def preparepoly(marr, i):
 
 def cal_eff_m (abundance, solid, wavelength, mspecies, polyidxmat):
     """
-    CWO: Please say briefly what this function does
+    This function calculates the effective refractive index based on the composition
+    Input:
+        abundance: abundance of each species
+        solid: a list of solid species
+        wavelength: wavelength on which to calculate the refractive index
+        mspecies: a list of refractive indices of each species
+        polyidxmat: Basically we are solving a complex polynomial equation, this is the polynomial index (see preparepoly)
     """
     sortidx = np.argsort(-abundance)    # rank from large to small
 
@@ -38,11 +44,16 @@ def cal_eff_m (abundance, solid, wavelength, mspecies, polyidxmat):
         polyidx = np.matmul(polyidxmat[k], abundance)
         allroots = np.roots(polyidx)
         physicalidx = np.where((allroots.real>0)&(allroots.imag>0))[0]    # physical solution for the refractory index.
+        # if there is only one root with both positive real and imaginary part, then we are done
         if len(physicalidx)==1:
             marr[k] = allroots[physicalidx]
             continue
 
         # find the polynomial index of the equation, with a new species
+        # Methematically I cannot proof that the polynomial equation only have one physical solution
+        # If there is more than one solution, then I have to add a species once at a time (from abundance order) to find the physical one.
+        # But in practice I have never seen more than one solution.
+        # So the readers can ignore all the big loop below.
         for n in range(2, len(solid)+1):
             print('Warning!')
             # polynomial index only inluding previous species

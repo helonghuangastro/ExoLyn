@@ -167,10 +167,11 @@ fitdict = {'H2O':0, 'Na':0, 'TiO':0, 'H2':0, 'H2S':0, 'K':0,
             'HAlO2':0,
             'MgSiO3(s)':2, 'Mg2SiO4(s)':2, 'TiO2(s)':3, 'SiO2(s)':3, 
             'Fe(s)':3, 'FeS(s)':3, 'FeO(s)':3, 'MgO(s)':3, 'TiO(s)':3,
-            'NaCl(s)':3, 'KCl(s)':3, 'Al2O3(s)':5, 'Fe2O3(s)':5, 'H2O(s)':6, 
+            'NaCl(s)':3, 'KCl(s)':3, 'Al2O3(s)':5, 'Fe2O3(s)':5, 
             'Na2S(s)':2}
 
-addexpressiondict = {'NH3(s)': [8, 10.53, -2161, -86594]}
+addexpressiondict = {'NH3(s)': [8, 10.53, -2161, -86594], 
+                    'H2O(s)': [6, -5723.265, -1.962499, 3.53068, -0.00728332, 0]}    # from Murphy and Koop 2005
 
-coeff = gibbsfit('gibbs_test.txt', fitdict, outputfile='gibbsfit.txt', isplot=False)
+# coeff = gibbsfit('gibbs_test.txt', fitdict, outputfile='gibbsfit.txt', isplot=False)
 # coeff = gibbsfit('gibbs_test.txt', {'H2O(s)':6}, outputfile=None, isplot=True)
