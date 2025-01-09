@@ -284,7 +284,7 @@ def postprocess(yn, ncond, ngas):
 
     return yn
 
-def adjust_upper(atmosphere, atmospheren, **kwargs):
+def adjust_upper(atmosphere, atmospheren, ctrl, **kwargs):
     ''' automatically change the upper atmosphere '''
     Parr = np.exp(atmosphere.grid)
     xc_tot = np.sum(atmosphere.xc, axis=0)    # total solid concentration
@@ -293,7 +293,7 @@ def adjust_upper(atmosphere, atmospheren, **kwargs):
     chem = atmosphere.chem
 
     # extend the upper boundary when xc at the upper boundary is too large
-    while(xc_tot[0]>xc_tot_max/1e10):
+    while(xc_tot[0]>np.maximum(xc_tot_max/1e10, ctrl.abserr*atmosphere.ncond)):
         Parr = np.logspace(np.log10(Parr[0])-1, np.log10(Parr[-1]), N)
         cache = funs.init_cache(Parr, chem)
         logP = np.log(Parr)
@@ -302,13 +302,15 @@ def adjust_upper(atmosphere, atmospheren, **kwargs):
             ynew[i] = np.interp(logP, atmosphere.grid, atmosphere.y[i])    # interpolate to get new y
         atmosphere.update_grid(logP, cache)
         atmosphere.update(ynew)
-        for i in range(10):
-            relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
+        while(ctrl.status==100):
+            yn = relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
+            ctrl.update(ynew=yn)
+        ctrl.clear()
         xc_tot = np.sum(atmosphere.xc, axis=0)
         xc_tot_max = np.max(xc_tot)
 
     # shrink the upper boundary when xc at the upper boundary is too small
-    idx = np.where(xc_tot>=xc_tot_max/1e10)[0][0]
+    idx = np.where(xc_tot>=np.maximum(xc_tot_max/1e10, ctrl.abserr*atmosphere.ncond))[0][0]
     Parr = np.logspace(np.log10(Parr[idx]), np.log10(Parr[-1]), N)
     cache = funs.init_cache(Parr, chem)
 
@@ -322,8 +324,11 @@ def adjust_upper(atmosphere, atmospheren, **kwargs):
     atmosphere.update(ynew)
 
     # Need more careful treatment. This '10' is arbitrary
-    for i in range(10):
-        relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
+    while(ctrl.status==100):
+        yn = relaxation(funs.E, funs.dEdy, atmospheren, **kwargs)
+        ctrl.update(ynew=yn)
+
+    ctrl.clear()
 
     return
 
@@ -404,7 +409,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
                 if len(ffail)==0:
                     ffail = np.array([np.minimum(1., 10*fpara)])
                 if fpara_name == 'fsed' and pars.autobdrytop:
-                    adjust_upper(atmosphere, atmospheren, **kwargs)
+                    adjust_upper(atmosphere, atmospheren, ctrl, **kwargs)
             # failed case
             else:
                 ctrl.clear()
