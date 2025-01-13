@@ -297,8 +297,18 @@ def cal_gibbs(chem, mole, T):
         gibbs = np.interp(T, Tref, gibbsref)
 
         # find the temperature where extrapolate
+        idxextlow = (T<np.min(Tref))
+        idxexthigh = (T>np.max(Tref))
         idxext = (T<np.min(Tref)) | (T>np.max(Tref))
-        if (idxext==True).any():
+        # extrapolate the lower end of temperature
+        if (idxextlow==True).any():
+            a1 = (gibbsref[1] - gibbsref[0]) / (Tref[1] - Tref[0])
+            gibbs[idxextlow] = gibbsref[0] + a1 * (T[idxextlow] - Tref[0])
+            isext = True
+        # extrapolate the higher end of temperature
+        if (idxexthigh==True).any():
+            a1 = (gibbsref[-1] - gibbsref[-2]) / (Tref[-1] - Tref[-2])
+            gibbs[idxexthigh] = gibbsref[-1] + a1 * (T[idxexthigh] - Tref[-1])
             isext = True
 
     # when extrapolate or the gibbs energy not in the table, using fit expression
