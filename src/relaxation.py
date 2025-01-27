@@ -200,11 +200,16 @@ def sol_py(X, B):
 def newy(matsol, y0, atmosphere, alpha=1, **kwargs):
     '''
     solve for the guess for next iteration
+    Input:
+    matsol: the solution (dx) of the function f(x_0) + J(x_0) * dx = 0
+    y0: the guess from last iteration
+    ynew = y0 + dx
     '''
     nvar = len(matsol)
     Emat = funs.E(atmosphere, **kwargs)
     Eold = np.mean(np.abs(Emat))
 
+    # limit the change of each step, so that it can atmost double it or halve it
     crel = 1.
     cabs = 1e-10
     maxincrease = crel * np.abs(y0[:nvar, :-1]) + cabs
@@ -286,47 +291,57 @@ def postprocess(yn, ncond, ngas):
 
 def adjust_upper(atmosphere, atmospheren, ctrl, **kwargs):
     ''' automatically change the upper atmosphere '''
-    Parr = np.exp(atmosphere.grid)
-    xc_tot = np.sum(atmosphere.xc, axis=0)    # total solid concentration
+    Parr = np.exp(atmospheren.grid)
+    xc_tot = np.sum(atmospheren.xc, axis=0)    # total solid concentration
     xc_tot_max = np.max(xc_tot)
-    N = atmosphere.N
-    chem = atmosphere.chem
+    N = atmospheren.N
+    chem = atmospheren.chem
 
     # extend the upper boundary when xc at the upper boundary is too large
-    while(xc_tot[0]>np.maximum(xc_tot_max/1e10, ctrl.abserr*atmosphere.ncond)):
+    while(xc_tot[0]>np.maximum(xc_tot_max/1e10, ctrl.abserr*atmospheren.ncond)):
         Parr = np.logspace(np.log10(Parr[0])-1, np.log10(Parr[-1]), N)
         cache = funs.init_cache(Parr, chem)
         logP = np.log(Parr)
-        ynew = np.empty_like(atmosphere.y)
+        ynew = np.empty_like(atmospheren.y)
         for i in range(len(ynew)):
-            ynew[i] = np.interp(logP, atmosphere.grid, atmosphere.y[i])    # interpolate to get new y
-        atmosphere.update_grid(logP, cache)
-        atmosphere.update(ynew)
+            ynew[i] = np.interp(logP, atmospheren.grid, atmospheren.y[i])    # interpolate to get new y
+        atmospheren.update_grid(logP, cache)
+        atmospheren.update(ynew)
         while(ctrl.status==100):
-            yn = relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
+            yn = relaxation(funs.E, funs.dEdy, atmospheren, **kwargs)
             ctrl.update(ynew=yn)
         ctrl.clear()
-        xc_tot = np.sum(atmosphere.xc, axis=0)
+        xc_tot = np.sum(atmospheren.xc, axis=0)
         xc_tot_max = np.max(xc_tot)
 
     # shrink the upper boundary when xc at the upper boundary is too small
-    idx = np.where(xc_tot>=np.maximum(xc_tot_max/1e10, ctrl.abserr*atmosphere.ncond))[0][0]
+    idx = np.where(xc_tot>=np.maximum(xc_tot_max/1e10, ctrl.abserr*atmospheren.ncond))[0][0]
     Parr = np.logspace(np.log10(Parr[idx]), np.log10(Parr[-1]), N)
     cache = funs.init_cache(Parr, chem)
 
     # update the atmosphere class
     logP = np.log(Parr)
-    ynew = np.empty_like(atmosphere.y)
+    ynew = np.empty_like(atmospheren.y)
     for i in range(len(ynew)):
-        ynew[i] = np.interp(logP, atmosphere.grid, atmosphere.y[i])    # interpolate to get new y
-    atmosphere.update_grid(logP, cache)
+        ynew[i] = np.interp(logP, atmospheren.grid, atmospheren.y[i])    # interpolate to get new y
     atmospheren.update_grid(logP, cache)
-    atmosphere.update(ynew)
+    atmospheren.update(ynew)
 
-    # Need more careful treatment. This '10' is arbitrary
     while(ctrl.status==100):
         yn = relaxation(funs.E, funs.dEdy, atmospheren, **kwargs)
         ctrl.update(ynew=yn)
+
+    # if successful, also update atmosphere
+    if ctrl.status==0:
+        atmosphere.update_grid(logP, cache)
+        atmosphere.update(atmospheren.y)
+    # else revert the change done to simulation domain and do not update the upper atmosphere boundary
+    else:
+        cache = funs.init_cache(atmosphere.Parr, chem)
+        atmospheren.update_grid(atmosphere.grid, cache)
+        atmospheren.update(atmosphere.y)
+        print('adjust upper boundary failed. Using original upper boundary.')
+
 
     ctrl.clear()
 
@@ -399,7 +414,7 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
             print('[relaxation.iterate]:conducted ', niter, ' iterations; exit status = ', ctrl.status)
             # plot if verbose='verbose'
             if pars.verboselevel >= 1:
-                myplot(atmosphere.Parr, atmospheren.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
+                myplot(atmospheren.Parr, atmospheren.y, atmospheren.rho, ncond, ngas, plotmode=pars.plotmode)
             # successful case
             if ctrl.status==0:
                 atmosphere.update(yn)
@@ -429,45 +444,59 @@ def iterate(atmosphere, atmospheren, fparas, ctrl):
     t2 = time.time()
     return t2-t1
 
-if __name__ == '__main__':
-    t0 = time.time()
-    init.check_input_errors ()
+def restart(atmosphere, oldatmfilename, ctrl):
+    ''' Restart ExoLyn from an existing solution '''
+    print(f'Restart from a existing solution: {oldatmfilename}')
+    ctrl.dummy['maxitr'] = 200
 
-    #suppress warnings
-    if pars.suppresswarnings=='all':
-        import warnings
-        warnings.filterwarnings('ignore')
+    oldatmdata = np.genfromtxt(oldatmfilename).T
 
-    # chemistry in all the chemistry data
-    chem = chemistry.chemdata(pars.gibbsfile)
+    # must start from an atmosphere with the same species
+    if oldatmdata.shape[0]-5 != atmosphere.y.shape[0]:
+        raise ValueError('The old atmosphere file has a different number of species than the current atmosphere')
 
-    # find the boundary of the domain
-    Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
+    # interpolate the atmosphere to the new grid
+    yinterp = np.empty_like(atmosphere.y)
+    for i in range(atmosphere.y.shape[0]):
+        logyold = np.log(oldatmdata[i+5])
+        yinterp[i] = np.exp(funs.InterpWithLinearBound(atmosphere.grid, oldatmdata[0], logyold))
 
-    logP = np.log(Parr)
+    # use the old atmosphere as an initial guess for the new atmosphere
+    atmosphere.update(yinterp, do_update_property=True)    # maybe don't need to update the derived properties?
 
-    atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere that has alchemistryy been converged
-    atmospheren = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere class used in each iteration
+    # start relaxation method
+    kwargs = {'fdif':1, 'fsed':1}
+    while(ctrl.status==100):
+        yn = relaxation(funs.E, funs.dEdy, atmosphere, **kwargs)
+        ctrl.update(ynew=yn)
+
+    if ctrl.status == 0 and yn[-1, -1]!=0.:
+        print('successfully computed the atmosphere from the old profile')
+        succflag = True
+    else:
+        print('relaxation from the old profile failed')
+        succflag = False
+
+    # reset the controller object
+    ctrl.dummy['maxitr'] = 100
+    ctrl.clear()
+
+    return succflag
+
+def finishing(atmosphere, isFinalPlot):
+    '''
+    Finishing works after convergence, including:
+    plotting, write down and calculate opacity
+    '''
+    # get the number of condensates and gas
     ncond = atmosphere.ncond
     ngas = atmosphere.ngas
 
-    y0 = init.init(atmosphere, method='Newton')
-    atmosphere.update(y0)
-    telap = time.time() -t0
-    print(f'[relaxation]:initialization finished in {telap:.2f} seconds')
-    # pdb.set_trace()
-    # plot the initial state
-    if pars.verboselevel >= 0:
+    # plot the results
+    if isFinalPlot:
         myplot(atmosphere.Parr, atmosphere.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
 
-    ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
-
-    telap = iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
-    print(f'[relaxation]:iteration finished in {telap:.2f} seconds')
-
-    if pars.verboselevel == -1:
-        myplot(atmosphere.Parr, atmosphere.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
-
+    # write down the final atmosphere structure
     if pars.writeoutputfile:
         output.writeatm(atmosphere)
 
@@ -490,4 +519,62 @@ if __name__ == '__main__':
         print('[relaxation]:using optool to calculate the opacities...')
         calkappa.cal_opa_all (atmosphere.ap, write=True, **doptical)
         print('[relaxation]:opacity data stored in ', doptical['dirkappa'])
+
+    return
+
+if __name__ == '__main__':
+    t0 = time.time()
+    init.check_input_errors ()
+
+    ctrl = control(mode='y', abserr=1e-10, relerr=1e-3)    # This value matters, when relerr=1e-4, T=8000 case cannot converge
+
+    #suppress warnings
+    if pars.suppresswarnings=='all':
+        import warnings
+        warnings.filterwarnings('ignore')
+
+    # chemistry in all the chemistry data
+    chem = chemistry.chemdata(pars.gibbsfile)
+
+    # find the boundary of the domain
+    Parr, cache = init.findbound(pars.Pa, pars.Pb, pars.N, chem)
+
+    logP = np.log(Parr)
+
+    # if start from a existing atmosphere
+    if '--restart' in sys.argv:
+        idx = sys.argv.index('--restart') + 1
+        atmofilename = sys.argv[idx]
+
+        atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)
+
+        restartflag = restart(atmosphere, atmofilename, ctrl)
+
+        # if successful, do finishing works and exit the code
+        if restartflag:
+            finishing(atmosphere, pars.verboselevel>-2)
+            sys.exit(0)
+        # else, restart the code from scratch
+
+    atmosphere = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere that has alchemistryy been converged
+    atmospheren = atmosphere_class.atmosphere(logP, pars.solid, pars.gas, cache)    # Atmosphere class used in each iteration
+    ncond = atmosphere.ncond
+    ngas = atmosphere.ngas
+
+    y0 = init.init(atmosphere, method='Newton')
+    atmosphere.update(y0)
+    telap = time.time() -t0
+    print(f'[relaxation]:initialization finished in {telap:.2f} seconds')
+    # pdb.set_trace()
+    # plot the initial state
+    if pars.verboselevel >= 0:
+        myplot(atmosphere.Parr, atmosphere.y, atmosphere.rho, ncond, ngas, plotmode=pars.plotmode)
+
+    telap = iterate(atmosphere, atmospheren, ['fdif', 'fsed'], ctrl)
+    print(f'[relaxation]:iteration finished in {telap:.2f} seconds')
+
+    isFinalPlot = False
+    if pars.verboselevel == -1:
+        isFinalPlot = True
+    finishing(atmosphere, isFinalPlot)
 

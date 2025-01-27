@@ -48,6 +48,25 @@ class sim_cache():
                 print('Not a numpy.ndarray object')
         return cache_single
 
+def InterpWithLinearBound(gridnew, gridold, valueold):
+    ''' Interpolate, but the boundary is linearly extrapolated '''
+    
+
+    yinterp = np.interp(gridnew, gridold, valueold)
+
+    idxextlow = (gridnew<np.min(gridold))
+    idxexthigh = (gridnew>np.max(gridold))
+
+    # extrapolate the lower end of temperature
+    if (idxextlow==True).any():
+        a1 = (valueold[1] - valueold[0]) / (gridold[1] - gridold[0])
+        yinterp[idxextlow] = valueold[0] + a1 * (gridnew[idxextlow] - gridold[0])
+    # extrapolate the higher end of temperature
+    if (idxexthigh==True).any():
+        a1 = (valueold[-1] - valueold[-2]) / (gridold[-1] - gridold[-2])
+        yinterp[idxexthigh] = valueold[-1] + a1 * (gridnew[idxexthigh] - gridold[-1])
+
+    return yinterp
 
 def E(atmosphere, **kwargs):
     '''
