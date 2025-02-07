@@ -447,42 +447,43 @@ def cal_Sc_all(xv, aparr, n_parr, bs, chem, cache):
 
     # how much solid will be formed assuming inpinging from each vapor
     inpingmol = xv3d * np.atleast_3d(rv) / (np.atleast_3d(mugas) * gasst3d)
-    inpingkey = np.min(inpingmol, axis=0).T                # key molecule that limit the inpinging rate
+    inpingmol_pos = np.where(inpingmol > 0, inpingmol, np.inf)    # when a gas molecule is the product of the reaction, it should not be counted when calculating the inpinging rate
+    inpingkey = np.min(inpingmol_pos, axis=0).T                # key molecule that limit the inpinging rate
 
     bsrec = np.array([bs[reaction.solidindex] for reaction in chem.reactions])
     Sc_term = pars.f_stick * rhoarr * (1 - bsrec/S) * np.pi* n_parr * aparr**2 * v_tharr * mucond * inpingkey
 
     return Sc_term
 
-def cal_Sc(xv, aparr, n_parr, bs, gasst, solidindex, i, cache, mugas, mucond):
-    ''' To calculate the condensation rate for each reaction. '''
-    gasst = np.atleast_2d(gasst).T
+# def cal_Sc(xv, aparr, n_parr, bs, gasst, solidindex, i, cache, mugas, mucond):
+#     ''' To calculate the condensation rate for each reaction. '''
+#     gasst = np.atleast_2d(gasst).T
 
-    rhoarr = cache.rho_grid
-    v_tharr = cache.v_th_grid
-    Di = cache.diffusivity_grid
-    Sbase = cache.Sbase_grid[i]
+#     rhoarr = cache.rho_grid
+#     v_tharr = cache.v_th_grid
+#     Di = cache.diffusivity_grid
+#     Sbase = cache.Sbase_grid[i]
 
-    S = Sbase * np.prod(xv**gasst, axis=0)    # should be careful: when two species becomes negative, S would be positive
-    rv = np.minimum(4*Di/(aparr*v_tharr), np.sqrt(pars.mgas/(mugas*cnt.mu)))
-    # relidx = np.where(gasst[:, 0]!=0)[0]    # gas species relevant to this reaction
-    # argkey = np.argmin((xv/mugas/gasst*rv)[relidx], axis=0)    # find the critical species
-    # argkey = relidx[argkey]
-    argkey = np.argmin((xv/mugas/gasst*rv), axis=0)
+#     S = Sbase * np.prod(xv**gasst, axis=0)    # should be careful: when two species becomes negative, S would be positive
+#     rv = np.minimum(4*Di/(aparr*v_tharr), np.sqrt(pars.mgas/(mugas*cnt.mu)))
+#     # relidx = np.where(gasst[:, 0]!=0)[0]    # gas species relevant to this reaction
+#     # argkey = np.argmin((xv/mugas/gasst*rv)[relidx], axis=0)    # find the critical species
+#     # argkey = relidx[argkey]
+#     argkey = np.argmin((xv/mugas/gasst*rv), axis=0)
 
-    # if xv<0, make Sc=0
-    # negxvidx = np.any(xv[relidx]<=0, axis=0)
-    # negapidx = np.where(aparr<=0)[0]
+#     # if xv<0, make Sc=0
+#     # negxvidx = np.any(xv[relidx]<=0, axis=0)
+#     # negapidx = np.where(aparr<=0)[0]
 
-    nu = np.choose(argkey, gasst)    # nu = gasst[argkey]?
-    mu = np.choose(argkey, mugas)
-    xvkey = np.choose(argkey, xv)
-    rvkey = np.choose(argkey, rv)
+#     nu = np.choose(argkey, gasst)    # nu = gasst[argkey]?
+#     mu = np.choose(argkey, mugas)
+#     xvkey = np.choose(argkey, xv)
+#     rvkey = np.choose(argkey, rv)
 
-    Sc_term = pars.f_stick * xvkey*rhoarr/nu * (1 - bs/S) * np.pi* n_parr * aparr**2 * v_tharr * rvkey * mucond[solidindex]/mu
-    # Sc_term[negxvidx] = 0    # if xv<0, make Sc=0
-    # Sc_term[negapidx] = 0    # if ap<0, make Sc=0
-    return Sc_term
+#     Sc_term = pars.f_stick * xvkey*rhoarr/nu * (1 - bs/S) * np.pi* n_parr * aparr**2 * v_tharr * rvkey * mucond[solidindex]/mu
+#     # Sc_term[negxvidx] = 0    # if xv<0, make Sc=0
+#     # Sc_term[negapidx] = 0    # if ap<0, make Sc=0
+#     return Sc_term
 
 def cal_Sbase(P, T, chem):
     '''
