@@ -448,6 +448,7 @@ def restart(atmosphere, oldatmfilename, ctrl):
     ''' Restart ExoLyn from an existing solution '''
     print(f'Restart from a existing solution: {oldatmfilename}')
     ctrl.dummy['maxitr'] = 200
+    ngas = len(pars.gas)
 
     oldatmdata = np.genfromtxt(oldatmfilename).T
 
@@ -460,6 +461,7 @@ def restart(atmosphere, oldatmfilename, ctrl):
     for i in range(atmosphere.y.shape[0]):
         logyold = np.log(oldatmdata[i+5])
         yinterp[i] = np.exp(funs.InterpWithLinearBound(atmosphere.grid, oldatmdata[0], logyold))
+    yinterp[-(ngas+1):-1, -1] = pars.xvb
 
     # use the old atmosphere as an initial guess for the new atmosphere
     atmosphere.update(yinterp, do_update_property=True)    # maybe don't need to update the derived properties?

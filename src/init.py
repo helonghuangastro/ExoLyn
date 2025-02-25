@@ -291,24 +291,39 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
         return flagsingle, n, xv
 
     def interpfail(mat, failidx):
-        ''' Interpolate failed grid points '''
-        if failidx[0]==0:
-            endi = 0
-        else:
-            endi = -1
+        ''' TBD: Need to think about a more robust way to interpolate failed grid points '''
+        N = mat.shape[1]
+        endi = -1
+        # if failidx[0]==0:
+        #     endi = 0
+        # else:
+        #     endi = -1
+        if len(failidx)==1:
+            if failidx[0]==0:
+                mat[:, 0] = mat[:, 1]
+                return mat
+            if failidx[0]==N-1:
+                mat[:, -1] = mat[:, -2]
+                return mat
         idx = np.where(np.diff(failidx)!=1)[0]+1    #idx is where the failidx is not continuous
         idx = np.append(idx, len(failidx))
         idx = np.insert(idx, 0, 0)
         for i in range(len(idx)-2, endi, -1):
             nfail = failidx[idx[i+1]-1]-failidx[idx[i]]+1    # number of failed grid points in each sector
             interplever = (np.arange(nfail)+1)/(nfail+1)     # leverage to interpolate the failed points from the neighbouring successful cases
-            rightcontrib = np.atleast_2d(mat[:, failidx[idx[i+1]-1]+1]).T * interplever
-            leftcontrib = np.atleast_2d(mat[:, failidx[idx[i]]-1]).T * (1-interplever)
+            if failidx[idx[i+1]-1]+1 >= N:
+                rightcontrib = np.atleast_2d(mat[:, failidx[idx[i]]-1]).T * interplever    # When the last sector includes the last grid point
+            else:
+                rightcontrib = np.atleast_2d(mat[:, failidx[idx[i+1]-1]+1]).T * interplever
+            if failidx[idx[i]]-1 < 0:
+                leftcontrib = np.atleast_2d(mat[:, failidx[idx[i+1]-1]+1]).T * (1-interplever)    # When the first sector includes the first grid point
+            else:
+                leftcontrib = np.atleast_2d(mat[:, failidx[idx[i]]-1]).T * (1-interplever)
             mat[:, failidx[idx[i]:idx[i+1]]] = rightcontrib + leftcontrib
 
-        if failidx[0]==0:
-            # process the first sector
-            mat[:, :(failidx[idx[1]-1]+1)] = np.atleast_2d(mat[:, failidx[idx[1]-1]+1]).T
+        # if failidx[0]==0:
+        #     # process the first sector
+        #     mat[:, :(failidx[idx[1]-1]+1)] = np.atleast_2d(mat[:, failidx[idx[1]-1]+1]).T
 
         return mat
 
