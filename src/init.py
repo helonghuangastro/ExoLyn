@@ -499,7 +499,7 @@ def findbound(Pa, Pb, N, chem):
             print('[init.findbound]WARNING: total super saturation ratio larger than 1 everywhere, may artificially truncate the cloud.')
             bottomidx = N-1
         else:
-            bottomidx = np.where((SR.sum(axis=0)[1:]<1) & (SR.sum(axis=0)[:-1]>1))[0][0]+1
+            bottomidx = np.where((SR.sum(axis=0)[1:]<1) & (SR.sum(axis=0)[:-1]>1))[0][-1]+1
         
         # set the final boundary of the atmosphere and initialize cache
         Pb = Parr[bottomidx] * 2
