@@ -369,19 +369,15 @@ def condnewton(xv, Parr, reactions, cachegrid, nu, muv, murc, rhosolid):
 
     # insert under-saturated values
     idx = np.where((status!=0) & (SR.sum(axis=0)<10.))[0]    # where the atmosphere is undersaturated
-    idxdiff = np.diff(idx)    # only do this for the last sector, because previous sectors can be inserted later.
-    if np.any(idxdiff!=1):
-        idxlastsector = np.where(idxdiff!=1)[0][-1]
-        idx = idx[(idxlastsector+1):]
-    # substitute the failed solid concentration
+    # substitute the failed solid concentration due to too low saturation ratio
     if len(idx)!=0:
-        xnlast = np.sum(murc / rhorel * nsolid[:, idx[0]-1])    # extrapolate xn
-        nsolid[:, idx] = np.atleast_2d(rhorel / murc).T * xnlast * SR[:, idx]    # check this
+        # Compute the nuclei concentration for the failed grid points
+        xn = np.sum(np.atleast_2d(murc / rhorel).T * nsolid, axis=0)
+        failidx = np.where(status<0)[0]
+        xn = interpfail(np.atleast_2d(xn), failidx)[0]    # interpolate the nuclei concentration for failed grid points
+
+        nsolid[:, idx] = np.atleast_2d(rhorel / murc).T * xn[idx] * SR[:, idx]
         xv[:, idx] = np.atleast_2d(pars.xvb).T
-        # for i in range(len(reactions)):
-        #     nsolid[i, idx] = nsolid[i, idx[0]-1]
-        # for i in range(len(xv)):
-        #     xv[i, idx] = xv[i, idx[0]-1]
         status[idx] = 1
 
     # insert super saturated values
@@ -483,7 +479,7 @@ def findbound(Pa, Pb, N, chem):
     cache = funs.init_cache(Parr, chem)
     SR = getS(cache)
     if pars.autobdrylow:
-        while(SR.sum(axis=0)[-1]>1):
+        while(np.all(SR.sum(axis=0)>1.)):
         # while(SR.sum(axis=0)[-1]>1 and cache.cachegrid.T_grid[-1]<=chem.gibbsTref[-1]):
             Pb *= 10
             Parr = np.logspace(np.log10(Pa), np.log10(Pb), pars.N)
