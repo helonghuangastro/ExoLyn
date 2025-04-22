@@ -505,22 +505,25 @@ def finishing(atmosphere, isFinalPlot):
 
     #calculation of optical constants (optional)
     #first we check if we can do it
+    from opticalnew import prepare_optical
     calcoptical = pars.calcoptical
-    if pars.calcoptical:
+    if calcoptical:
         import optical
-        calcoptical, doptical = optical.prepare_optical (**pars.doptical)
+        calcoptical, doptical = prepare_optical (**pars.doptical)
 
 
     #we are all set
     if calcoptical:
-        import calmeff, calkappa
-        print('[relaxation]:now continue with calculating the effective medium indices...')
-        mmat = calmeff.cal_eff_m_all (atmosphere.bs, pars.solid, doptical['wavelengthgrid'])
-        calmeff.writelnk(mmat, doptical['wavelengthgrid'], atmosphere.rho, folder=doptical['dirmeff'])
+        # import calmeff, calkappa
+        # print('[relaxation]:now continue with calculating the effective medium indices...')
+        # mmat = calmeff.cal_eff_m_all (atmosphere.bs, pars.solid, doptical['wavelengthgrid'])
+        # calmeff.writelnk(mmat, doptical['wavelengthgrid'], atmosphere.rho, folder=doptical['dirmeff'])
 
-        print('[relaxation]:using optool to calculate the opacities...')
-        calkappa.cal_opa_all (atmosphere.ap, write=True, **doptical)
-        print('[relaxation]:opacity data stored in ', doptical['dirkappa'])
+        # print('[relaxation]:using optool to calculate the opacities...')
+        # calkappa.cal_opa_all (atmosphere.ap, write=True, **doptical)
+        # print('[relaxation]:opacity data stored in ', doptical['dirkappa'])
+        from opticalnew import cal_meff_and_kappa
+        cal_meff_and_kappa(atmosphere.ap, atmosphere.bs, atmosphere.rho, pars.solid, doptical)
 
     return
 
