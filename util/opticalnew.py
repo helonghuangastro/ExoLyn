@@ -68,7 +68,7 @@ def prepare_optical (optooldir=None, wavelengthgrid=None, dirmeff=None, dirkappa
 
     elif type(wavelengthgrid)==str:
         #TBD read the wavelength grid from file 
-        pass
+        wavelengthgrid = np.load(wavelengthgrid)
 
     #perhaps not the most elegant solution
     doptical = {'optooldir':optooldir, 'wavelengthgrid':wavelengthgrid, 
