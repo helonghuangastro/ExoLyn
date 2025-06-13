@@ -145,6 +145,7 @@ myplot(Parr, ynew, rhop, ncod, ngas, plotmode='none')
 ap = atmosphere.ap
 n_p = atmosphere.np
 rhog = cachegrid.rho_grid
+rhop = atmosphere.rhop
 if kappafolder == None:
     from calmeff import cal_eff_m_all, writelnk
     from calkappa import cal_opa_all
@@ -172,8 +173,8 @@ else:
         kappaext[:, i] = data[3]
         kappascat[:, i] = data[2]
         gsca[:, i] = data[4]
-kappadata = kappaext/rhog*n_p*4*np.pi/3*ap**3
-kappascat = kappascat/rhog*n_p*4*np.pi/3*ap**3
+kappadata = kappaext*rhop/rhog*n_p*4*np.pi/3*ap**3
+kappascat = kappascat*rhop/rhog*n_p*4*np.pi/3*ap**3
 # calculate spline object
 spobj = RectBivariateSpline(wlenkappa, Parrbar, kappadata)
 # sys.exit()

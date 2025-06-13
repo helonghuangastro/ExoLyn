@@ -143,6 +143,7 @@ plt.clf()
 ap = atmosphere.ap
 n_p = atmosphere.np
 rhog = cachegrid.rho_grid
+rhop = atmosphere.rhop
 if kappafolder == None:
     from calmeff import cal_eff_m_all, writelnk
     from calkappa import cal_opa_all
@@ -167,8 +168,8 @@ else:
         data = data.T
         kappasca[:, i] = data[2]
         kappaabs[:, i] = data[1]
-kappadatasca = kappasca/rhog*n_p*4*np.pi/3*ap**3
-kappadataabs = kappaabs/rhog*n_p*4*np.pi/3*ap**3
+kappadatasca = kappasca*rhop/rhog*n_p*4*np.pi/3*ap**3
+kappadataabs = kappaabs*rhop/rhog*n_p*4*np.pi/3*ap**3
 # calculate spline object
 spsca = RectBivariateSpline(wlenkappa, Parrbar, kappadatasca)
 spabs = RectBivariateSpline(wlenkappa, Parrbar, kappadataabs)

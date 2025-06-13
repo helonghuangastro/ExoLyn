@@ -34,6 +34,7 @@ ngas = len(pars.gas)
 ap = atmosphere.ap
 n_p = atmosphere.np
 rhog = cachegrid.rho_grid
+rhop = atmosphere.rhop
 
 # calculate effective refractory index
 bs = atmosphere.bs
@@ -46,7 +47,7 @@ opobj = cal_opa_all(ap, write=False, Nlam=len(wlenkappa), optooldir='/home/helon
 kappaext = opobj['kext']
 
 # calculate opacity
-kappadata = kappaext/rhog*n_p*4*np.pi/3*ap**3
+kappadata = kappaext*rhop/rhog*n_p*4*np.pi/3*ap**3
 
 # calculate the optical depth
 dx   = logP[1] - logP[0]
