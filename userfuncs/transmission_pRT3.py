@@ -145,7 +145,7 @@ myplot(Parr, ynew, rhop, ncod, ngas, plotmode='none')
 ap = atmosphere.ap
 n_p = atmosphere.np
 rhog = cachegrid.rho_grid
-rhop = atmosphere.rhop
+rhop = atmosphere.rho
 if kappafolder == None:
     from calmeff import cal_eff_m_all, writelnk
     from calkappa import cal_opa_all

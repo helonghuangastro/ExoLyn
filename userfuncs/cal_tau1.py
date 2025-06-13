@@ -34,7 +34,7 @@ ngas = len(pars.gas)
 ap = atmosphere.ap
 n_p = atmosphere.np
 rhog = cachegrid.rho_grid
-rhop = atmosphere.rhop
+rhop = atmosphere.rho
 
 # calculate effective refractory index
 bs = atmosphere.bs
