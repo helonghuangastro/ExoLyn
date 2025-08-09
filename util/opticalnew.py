@@ -425,8 +425,8 @@ def meff_kappa_single (agrain, abundance, rho, solid, wavelengthgrid,
                 opt.write(f'{wavelengthgrid[j]} {marr[j].real} {marr[j].imag}\n')
 
     # run optool...
-    # command = optooldir+f'/optool {filename} -q -p 0.25 -a {agrain[i]*1e4} -l {filename} -o {doptical['dirkappa']}'
-    command = optooldir+f'/optool {filename} -q -xlim 1e3 -p 0.25 -a {agrain[i]*1e4} -l {filename}'
+    ap_um = np.minimum(agrain[i]*1e4, 1e4)
+    command = optooldir+f'/optool {filename} -q -xlim 1e3 -p 0.25 -a {ap_um} -l {filename}'
 
     p = optool.particle(command, silent=True)
 
