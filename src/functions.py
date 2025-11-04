@@ -399,7 +399,15 @@ def cal_vsed(ap, rhop, cache):
     '''sedimentation velocity'''
     v_tharr = cache.v_th_grid
     rhoarr = cache.rho_grid
-    return -pars.g * ap * rhop / (v_tharr * rhoarr) * np.sqrt(1 + (4*ap/(9*cache.lmfp_grid))**2)    # the last term accounts for Stokes regime, smoothed the transition
+    lmfarr = cache.lmfp_grid
+    vsed = pars.g * ap * rhop / (v_tharr * rhoarr) * np.sqrt(1 + (4*ap/(9*lmfarr))**2)    # This is the abslute value of the sedimentation velocity
+
+    # check whether in the quadratic drag regime
+    Re = 2*ap * vsed / (lmfarr * v_tharr) * np.sqrt(8/np.pi)
+    idx = np.where((Re>44) & (4*ap/(9*lmfarr)>1))[0]
+    vsed[idx] = np.sqrt(8/(3*0.44) * rhop[idx] * pars.g * ap[idx] / rhoarr[idx])
+
+    return -vsed    # the last term accounts for Stokes regime, smoothed the transition
 
 def cal_t_coag_inv(ap, rhop, n_p, cache, deltv=0):
     '''
